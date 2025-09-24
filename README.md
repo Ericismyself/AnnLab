@@ -25,7 +25,7 @@
 克隆或下载本仓库到本地：
 
 ```
-git clone https://github.com/yourusername/annlab-template.git
+git clone https://github.com/Ericismyself/AnnLab.git
 ```
 
 ### 2. 定制内容
@@ -51,7 +51,7 @@ git clone https://github.com/yourusername/annlab-template.git
 2. 将修改好的网站文件上传到该仓库
 3. 在仓库设置中开启GitHub Pages功能
 4. 选择主分支(main或master)作为发布来源
-5. 网站将自动发布在`https://yourusername.github.io/repository-name`
+5. 网站将自动发布在`https://ericismyself.github.io/AnnLab`
 
 #### 其他部署选项
 
@@ -93,8 +93,7 @@ annlab-template/
 - git status
 - git add .
 - git commit -m "添加团队成员头像和相关样式优化"
-- git remote -v
-- git push origin main
+- git push -u origin main
 
 ## 兼容性
 
