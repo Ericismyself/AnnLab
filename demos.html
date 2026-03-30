@@ -5,15 +5,354 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo 演示 - AnnTeam</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/cyber.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── 覆盖导航的默认白底 ── */
+        body {
+            background-color: #0a0a0f !important;
+            background-image: none !important;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        /* ── 全局网格背景 ── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header, nav, main, footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── 顶部导航 ── */
+        nav {
+            background: rgba(10, 10, 15, 0.95) !important;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.1) !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        nav ul li a {
+            color: #7a7a8c !important;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: color 0.2s;
+        }
+
+        nav ul li a:hover {
+            color: #00f5ff !important;
+        }
+
+        nav ul li a.active {
+            color: #00f5ff !important;
+            text-shadow: 0 0 8px rgba(0, 245, 255, 0.5);
+        }
+
+        /* ── 头部 ── */
+        header {
+            background: rgba(10, 10, 15, 0.95) !important;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.1) !important;
+            padding: 48px 0 40px !important;
+            text-align: center;
+        }
+
+        header h1 {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            color: #00f5ff !important;
+            text-shadow: 0 0 12px rgba(0, 245, 255, 0.6), 0 0 30px rgba(0, 245, 255, 0.25) !important;
+            letter-spacing: 4px !important;
+            text-transform: uppercase !important;
+            margin-bottom: 10px !important;
+        }
+
+        header p {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.82rem !important;
+            color: #7a7a8c !important;
+            letter-spacing: 2px !important;
+        }
+
+        /* ── 主容器 ── */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        main {
+            padding: 48px 0 !important;
+        }
+
+        /* ── 快速导航 ── */
+        .demo-quick-nav {
+            margin-bottom: 56px;
+        }
+
+        .quick-nav-label {
+            font-size: 0.68rem;
+            color: #3a3a4a;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .quick-nav-label::before,
+        .quick-nav-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,245,255,0.15), transparent);
+        }
+
+        .quick-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+        }
+
+        .quick-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 245, 255, 0.12);
+            border-radius: 4px;
+            color: #7a7a8c;
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.5px;
+            text-align: center;
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+
+        .quick-nav-btn:hover {
+            border-color: rgba(0, 245, 255, 0.4);
+            background: rgba(0, 245, 255, 0.05);
+            color: #00f5ff;
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.1), inset 0 0 15px rgba(0, 245, 255, 0.03);
+            transform: translateY(-2px);
+        }
+
+        .quick-nav-btn i {
+            font-size: 1.1rem;
+            color: #00f5ff;
+            text-shadow: 0 0 8px rgba(0, 245, 255, 0.5);
+        }
+
+        .quick-nav-btn:hover i {
+            color: #00f5ff;
+        }
+
+        /* ── 区块标题 ── */
+        section[id] {
+            margin-bottom: 64px;
+            scroll-margin-top: 80px;
+        }
+
+        .section-title-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .section-title-row h2 {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.15rem !important;
+            font-weight: 600 !important;
+            color: #00f5ff !important;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.5) !important;
+            letter-spacing: 2px !important;
+            text-transform: uppercase !important;
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+
+        .section-title-row h2 i {
+            color: #00f5ff !important;
+            margin-right: 8px;
+        }
+
+        /* 赛博区块（云计算Demo 5-8）用粉色标题 */
+        .section-title-row.kg h2 {
+            color: #ff2d78 !important;
+            text-shadow: 0 0 10px rgba(255, 45, 120, 0.5) !important;
+        }
+
+        .section-title-row.kg h2 i {
+            color: #ff2d78 !important;
+        }
+
+        /* 标题左边的霓虹竖线 */
+        .section-title-row::before {
+            content: '';
+            width: 3px;
+            height: 24px;
+            background: linear-gradient(180deg, #00f5ff, rgba(0,245,255,0.2));
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .section-title-row.kg::before {
+            background: linear-gradient(180deg, #ff2d78, rgba(255,45,120,0.2));
+        }
+
+        /* ── 描述文字 ── */
+        .demo-desc {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.78rem !important;
+            color: #3a3a4a !important;
+            line-height: 1.8 !important;
+            margin-bottom: 20px !important;
+            padding-left: 17px !important;
+        }
+
+        /* ── iframe 容器 ── */
+        .demo-frame-wrap {
+            border: 1px solid rgba(0, 245, 255, 0.12);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            background: #0a0a0f;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 知识图谱 Demo 的 iframe 顶部霓虹线 */
+        .demo-frame-wrap::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00f5ff, transparent);
+            opacity: 0.5;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 云计算 Demo 用粉色线 */
+        .demo-frame-wrap.cyber-frame::before {
+            background: linear-gradient(90deg, transparent, #ff2d78, transparent);
+        }
+
+        .demo-frame-wrap.cyber-frame {
+            border-color: rgba(255, 45, 120, 0.15);
+        }
+
+        .demo-frame {
+            width: 100%;
+            border: none;
+            display: block;
+            background: #0a0a0f;
+        }
+
+        /* ── 分割装饰 ── */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,245,255,0.08), transparent);
+            margin: 0 0 48px 0;
+        }
+
+        /* ── Footer ── */
+        footer {
+            background: rgba(10, 10, 15, 0.98) !important;
+            border-top: 1px solid rgba(0, 245, 255, 0.08) !important;
+            padding: 32px 0 !important;
+        }
+
+        footer h3 {
+            font-family: 'JetBrains Mono', monospace !important;
+            color: #00f5ff !important;
+            font-size: 0.8rem !important;
+            letter-spacing: 2px !important;
+            text-transform: uppercase !important;
+        }
+
+        footer p {
+            font-family: 'JetBrains Mono', monospace !important;
+            color: #3a3a4a !important;
+            font-size: 0.75rem !important;
+        }
+
+        footer .copyright p {
+            color: #2a2a3a !important;
+        }
+
+        /* ── 标签小徽章 ── */
+        .demo-cyber-badge {
+            font-size: 0.58rem !important;
+            padding: 2px 7px;
+            border: 1px solid #ff2d78;
+            color: #ff2d78;
+            border-radius: 2px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(255,45,120,0.08);
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        .demo-cyber-badge.kg {
+            border-color: #00f5ff;
+            color: #00f5ff;
+            background: rgba(0,245,255,0.08);
+        }
+
+        /* ── 响应式 ── */
+        @media (max-width: 1100px) {
+            .quick-nav-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        @media (max-width: 700px) {
+            .quick-nav-grid { grid-template-columns: repeat(2, 1fr); }
+            header h1 { font-size: 1.4rem !important; letter-spacing: 2px !important; }
+        }
+
+        @media (max-width: 480px) {
+            .quick-nav-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── 加载动画 ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        section[id] {
+            animation: fadeSlideUp 0.5s ease both;
+        }
+
+        section[id]:nth-child(1) { animation-delay: 0.05s; }
+        section[id]:nth-child(2) { animation-delay: 0.1s; }
+        section[id]:nth-child(3) { animation-delay: 0.15s; }
+        section[id]:nth-child(4) { animation-delay: 0.2s; }
+        section[id]:nth-child(5) { animation-delay: 0.25s; }
+        section[id]:nth-child(6) { animation-delay: 0.3s; }
+        section[id]:nth-child(7) { animation-delay: 0.35s; }
+        section[id]:nth-child(8) { animation-delay: 0.4s; }
+    </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>AnnTeam</h1>
-            <p>知识图谱与云计算团队 · Demo 演示</p>
-        </div>
-    </header>
 
     <nav>
         <div class="container">
@@ -28,125 +367,177 @@
         </div>
     </nav>
 
+    <header>
+        <div class="container">
+            <h1>AnnTeam</h1>
+            <p>知识图谱与云计算团队 · Demo 演示</p>
+        </div>
+    </header>
+
     <main>
         <div class="container">
 
             <!-- 快速导航 -->
-            <section class="demo-quick-nav">
-                <h3><i class="fas fa-th-large"></i> 快速导航</h3>
+            <div class="demo-quick-nav">
+                <div class="quick-nav-label">QUICK NAVIGATE</div>
                 <div class="quick-nav-grid">
                     <a href="#kg-construction" class="quick-nav-btn">
-                        <i class="fas fa-project-diagram"></i> 知识图谱构建
+                        <i class="fas fa-project-diagram"></i>
+                        知识图谱构建
                     </a>
                     <a href="#kg-completion" class="quick-nav-btn">
-                        <i class="fas fa-database"></i> 知识补全
+                        <i class="fas fa-database"></i>
+                        知识补全
                     </a>
                     <a href="#kg-fusion" class="quick-nav-btn">
-                        <i class="fas fa-sitemap"></i> 知识融合
+                        <i class="fas fa-sitemap"></i>
+                        知识融合
                     </a>
                     <a href="#mm-kg" class="quick-nav-btn">
-                        <i class="fas fa-layer-group"></i> 多模态知识图谱
+                        <i class="fas fa-layer-group"></i>
+                        多模态知识图谱
                     </a>
                     <a href="#load-modeling" class="quick-nav-btn">
-                        <i class="fas fa-chart-line"></i> 负载建模
+                        <i class="fas fa-chart-line"></i>
+                        负载建模
                     </a>
                     <a href="#load-prediction" class="quick-nav-btn">
-                        <i class="fas fa-chart-bar"></i> 负载预测
+                        <i class="fas fa-chart-bar"></i>
+                        负载预测
                     </a>
                     <a href="#autoscaling" class="quick-nav-btn">
-                        <i class="fas fa-expand-arrows-alt"></i> 自动弹性扩缩
+                        <i class="fas fa-expand-arrows-alt"></i>
+                        自动弹性扩缩
                     </a>
                     <a href="#anomaly-detection" class="quick-nav-btn">
-                        <i class="fas fa-exclamation-triangle"></i> 异常检测
+                        <i class="fas fa-exclamation-triangle"></i>
+                        异常检测
                     </a>
                 </div>
-            </section>
+            </div>
 
-            <!-- 知识图谱及其应用 -->
+            <!-- 分割线 -->
+            <div class="section-divider"></div>
+
+            <!-- Demo 1：知识图谱构建 -->
             <section id="kg-construction">
-                <h2><i class="fas fa-project-diagram"></i> 知识图谱构建</h2>
+                <div class="section-title-row">
+                    <h2><i class="fas fa-project-diagram"></i>知识图谱构建</h2>
+                    <span class="demo-cyber-badge kg">知识图谱</span>
+                </div>
                 <p class="demo-desc">
                     本演示展示了从非结构化文本中自动抽取实体、关系，构建领域知识图谱的完整流程。
                     以奶业金融供应链场景为例，预置伊利集团相关文本片段。
                 </p>
                 <div class="demo-frame-wrap">
-                    <iframe src="demos/kg-construction/index.html" class="demo-frame" loading="lazy"></iframe>
+                    <iframe src="demos/kg-construction/index.html" class="demo-frame" style="height:580px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 2：知识补全 -->
             <section id="kg-completion">
-                <h2><i class="fas fa-database"></i> 基于知识图谱的知识补全</h2>
+                <div class="section-title-row">
+                    <h2><i class="fas fa-database"></i>基于知识图谱的知识补全</h2>
+                    <span class="demo-cyber-badge kg">知识图谱</span>
+                </div>
                 <p class="demo-desc">
                     展示知识图谱补全算法，对缺失的实体和关系进行预测与推理。
                     以医疗领域（糖尿病）知识图谱为例，演示推理过程与置信度计算。
                 </p>
                 <div class="demo-frame-wrap">
-                    <iframe src="demos/kg-completion/index.html" class="demo-frame" loading="lazy"></iframe>
+                    <iframe src="demos/kg-completion/index.html" class="demo-frame" style="height:600px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 3：知识融合 -->
             <section id="kg-fusion">
-                <h2><i class="fas fa-sitemap"></i> 知识融合与推理</h2>
+                <div class="section-title-row">
+                    <h2><i class="fas fa-sitemap"></i>知识融合与推理</h2>
+                    <span class="demo-cyber-badge kg">知识图谱</span>
+                </div>
                 <p class="demo-desc">
                     将"马蜂窝风格"和"大众点评风格"的内蒙古旅游知识图谱进行对齐融合演示。
                     三步式交互：实体对齐 → 执行融合 → 完成推理。
                 </p>
                 <div class="demo-frame-wrap">
-                    <iframe src="demos/kg-fusion/index.html" class="demo-frame" loading="lazy"></iframe>
+                    <iframe src="demos/kg-fusion/index.html" class="demo-frame" style="height:720px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 4：多模态知识图谱 -->
             <section id="mm-kg">
-                <h2><i class="fas fa-layer-group"></i> 多模态知识图谱</h2>
+                <div class="section-title-row">
+                    <h2><i class="fas fa-layer-group"></i>多模态知识图谱</h2>
+                    <span class="demo-cyber-badge kg">知识图谱</span>
+                </div>
                 <p class="demo-desc">
                     融合文本、图像、知识的多模态知识图谱展示，涵盖奶业金融、医疗、旅游三大领域。
                     点击任意节点查看图文详情与邻居关系。
                 </p>
                 <div class="demo-frame-wrap">
-                    <iframe src="demos/mm-kg/index.html" class="demo-frame" loading="lazy"></iframe>
+                    <iframe src="demos/mm-kg/index.html" class="demo-frame" style="height:620px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- 分割线 -->
+            <div class="section-divider"></div>
+
+            <!-- Demo 5：负载建模 -->
             <section id="load-modeling">
-                <h2><i class="fas fa-chart-line"></i> 负载建模 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <div class="section-title-row kg">
+                    <h2><i class="fas fa-chart-line"></i>负载建模</h2>
+                    <span class="demo-cyber-badge">赛博风格</span>
+                </div>
                 <p class="demo-desc">
                     容器云环境下的工作负载特征分析与建模，支持 CPU / 内存 / 网络 I/O / QPS / 磁盘 I/O 五类指标的实时监控与类型识别。
                 </p>
-                <div class="demo-frame-wrap demo-frame-cyber">
-                    <iframe src="demos/load-modeling/index.html" class="demo-frame" loading="lazy"></iframe>
+                <div class="demo-frame-wrap cyber-frame">
+                    <iframe src="demos/load-modeling/index.html" class="demo-frame" style="height:500px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 6：负载预测 -->
             <section id="load-prediction">
-                <h2><i class="fas fa-chart-bar"></i> 负载预测 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <div class="section-title-row kg">
+                    <h2><i class="fas fa-chart-bar"></i>负载预测</h2>
+                    <span class="demo-cyber-badge">赛博风格</span>
+                </div>
                 <p class="demo-desc">
                     基于 LSTM 深度学习模型的时间序列预测，灰色区域为历史数据，粉色区域为预测结果及置信区间。
                     可切换 1h / 6h / 24h 预测范围。
                 </p>
-                <div class="demo-frame-wrap demo-frame-cyber">
-                    <iframe src="demos/load-prediction/index.html" class="demo-frame" loading="lazy"></iframe>
+                <div class="demo-frame-wrap cyber-frame">
+                    <iframe src="demos/load-prediction/index.html" class="demo-frame" style="height:480px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 7：自动弹性扩缩 -->
             <section id="autoscaling">
-                <h2><i class="fas fa-expand-arrows-alt"></i> 自动弹性扩缩 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <div class="section-title-row kg">
+                    <h2><i class="fas fa-expand-arrows-alt"></i>自动弹性扩缩</h2>
+                    <span class="demo-cyber-badge">赛博风格</span>
+                </div>
                 <p class="demo-desc">
                     基于预测的自动化容器扩缩容策略演示，点击"INJECT LOAD"按钮观察扩缩容过程。
                     Matrix 风格背景 + 实时容器可视化。
                 </p>
-                <div class="demo-frame-wrap demo-frame-cyber">
-                    <iframe src="demos/autoscaling/index.html" class="demo-frame" loading="lazy"></iframe>
+                <div class="demo-frame-wrap cyber-frame">
+                    <iframe src="demos/autoscaling/index.html" class="demo-frame" style="height:520px;" loading="lazy"></iframe>
                 </div>
             </section>
 
+            <!-- Demo 8：异常检测 -->
             <section id="anomaly-detection">
-                <h2><i class="fas fa-exclamation-triangle"></i> 异常检测 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <div class="section-title-row kg">
+                    <h2><i class="fas fa-exclamation-triangle"></i>异常检测</h2>
+                    <span class="demo-cyber-badge">赛博风格</span>
+                </div>
                 <p class="demo-desc">
                     容器云环境下的资源异常实时检测与告警，点击按钮触发各类异常事件观测。
                     支持 CPU 飙升、内存泄漏、网络异常、抖动异常四类场景。
                 </p>
-                <div class="demo-frame-wrap demo-frame-cyber">
-                    <iframe src="demos/anomaly-detection/index.html" class="demo-frame" loading="lazy"></iframe>
+                <div class="demo-frame-wrap cyber-frame">
+                    <iframe src="demos/anomaly-detection/index.html" class="demo-frame" style="height:500px;" loading="lazy"></iframe>
                 </div>
             </section>
 
@@ -166,8 +557,5 @@
         </div>
     </footer>
 
-    <script>
-        document.body.classList.add('loaded');
-    </script>
 </body>
 </html>
