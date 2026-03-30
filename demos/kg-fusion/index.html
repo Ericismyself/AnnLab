@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识融合与推理 — 旅游文化</title>
+    <link rel="stylesheet" href="../../css/kg.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .fusion-demo {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+        .fusion-panel {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--kg-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .fusion-panel-header {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .fusion-panel-header.left {
+            background: rgba(58,123,213,0.12);
+            border-bottom: 1px solid rgba(58,123,213,0.3);
+        }
+        .fusion-panel-header.right {
+            background: rgba(124,77,255,0.12);
+            border-bottom: 1px solid rgba(124,77,255,0.3);
+        }
+        .fusion-panel-header.merged {
+            background: rgba(76,175,80,0.12);
+            border-bottom: 1px solid rgba(76,175,80,0.3);
+        }
+        .fusion-panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--kg-white);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .fusion-panel-header.left .fusion-panel-title i { color: var(--kg-blue-light); }
+        .fusion-panel-header.right .fusion-panel-title i { color: var(--kg-purple-light); }
+        .fusion-panel-header.merged .fusion-panel-title i { color: var(--kg-green-light); }
+        .fusion-graph {
+            height: 320px;
+            position: relative;
+        }
+        #fusion-left, #fusion-right, #fusion-merged {
+            width: 100%;
+            height: 320px;
+        }
+        .fusion-center {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+        }
+        .fusion-step-btn {
+            width: 100%;
+        }
+        .fusion-log {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .fusion-log::-webkit-scrollbar { width: 4px; }
+        .fusion-log::-webkit-scrollbar-thumb { background: var(--kg-purple); border-radius: 2px; }
+        .fusion-log-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(124,77,255,0.1);
+            font-size: 0.8rem;
+            animation: kgFadeIn 0.3s ease;
+        }
+        .fusion-log-item:last-child { border-bottom: none; }
+        .fusion-log-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .fusion-log-text { color: var(--kg-text); line-height: 1.5; }
+        .fusion-log-text strong { font-weight: 600; }
+        .fusion-candidates {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            padding: 10px 14px;
+        }
+        .fusion-candidate-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 0.78rem;
+            border-bottom: 1px solid rgba(124,77,255,0.1);
+        }
+        .fusion-candidate-item:last-child { border-bottom: none; }
+        .fusion-score {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        .fusion-score.high { background: rgba(76,175,80,0.2); color: var(--kg-green-light); }
+        .fusion-score.mid { background: rgba(255,214,10,0.2); color: #ffd60a; }
+        .fusion-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+        }
+        .fusion-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        @media (max-width: 900px) {
+            .fusion-demo { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="kg-grid-bg"></div>
+<div class="kg-container kg-main">
+
+    <div class="kg-page-header">
+        <h1 class="kg-page-title"><i class="fas fa-sitemap"></i>知识融合与推理</h1>
+        <p class="kg-page-desc">将不同来源的旅游知识图谱进行实体对齐与融合，以内蒙古旅游数据为例</p>
+        <span class="kg-page-tag travel"><i class="fas fa-plane"></i> 旅游文化</span>
+    </div>
+
+    <div class="fusion-demo">
+        <!-- 左侧：SOURCE_A -->
+        <div class="fusion-panel">
+            <div class="fusion-panel-header left">
+                <span class="fusion-panel-title"><i class="fas fa-database"></i> SOURCE_A</span>
+                <span style="font-size:0.7rem;color:var(--kg-blue-light);">马蜂窝风格</span>
+            </div>
+            <div class="fusion-graph">
+                <div id="fusion-left"></div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--kg-border);">
+                <div style="font-size:0.72rem;color:var(--kg-text-dim);margin-bottom:6px;">图谱统计</div>
+                <div style="display:flex;gap:12px;font-size:0.78rem;">
+                    <span><i class="fas fa-circle" style="font-size:0.5rem;color:var(--kg-purple-light)"></i> 实体 <strong id="leftNodes" style="color:var(--kg-white)">5</strong></span>
+                    <span><i class="fas fa-link" style="font-size:0.6rem;color:var(--kg-purple-light)"></i> 关系 <strong id="leftRels" style="color:var(--kg-white)">4</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央控制区 -->
+        <div class="fusion-center">
+            <div class="fusion-status" id="fusionStatus">
+                <div class="fusion-status-dot" style="background:var(--kg-text-dim);"></div>
+                <span style="color:var(--kg-text-dim);" id="fusionStatusText">等待开始</span>
+            </div>
+
+            <button class="kg-btn kg-btn-primary fusion-step-btn" id="step1Btn" onclick="runStep1()">
+                <i class="fas fa-search"></i> Step 1 · 实体对齐
+            </button>
+            <button class="kg-btn kg-btn-ghost fusion-step-btn" id="step2Btn" onclick="runStep2()" disabled style="opacity:0.4;">
+                <i class="fas fa-compress-arrows-alt"></i> Step 2 · 执行融合
+            </button>
+            <button class="kg-btn kg-btn-ghost fusion-step-btn" id="step3Btn" onclick="runStep3()" disabled style="opacity:0.4;">
+                <i class="fas fa-check-circle"></i> Step 3 · 完成推理
+            </button>
+
+            <div class="kg-divider"></div>
+
+            <div class="fusion-candidates" id="fusionCandidates" style="width:100%;">
+                <div style="font-size:0.72rem;color:var(--kg-text-dim);margin-bottom:8px;font-weight:500;">
+                    <i class="fas fa-exchange-alt" style="margin-right:4px;"></i> 对齐候选
+                </div>
+                <div class="fusion-candidate-item">
+                    <span style="color:var(--kg-blue-light);">呼和浩特</span>
+                    <span style="color:var(--kg-text-dim);">≈</span>
+                    <span style="color:var(--kg-purple-light);">呼市</span>
+                    <span class="fusion-score high">95%</span>
+                </div>
+                <div class="fusion-candidate-item">
+                    <span style="color:var(--kg-blue-light);">内蒙古博物院</span>
+                    <span style="color:var(--kg-text-dim);">≈</span>
+                    <span style="color:var(--kg-purple-light);">内蒙古博物馆</span>
+                    <span class="fusion-score high">92%</span>
+                </div>
+                <div class="fusion-candidate-item">
+                    <span style="color:var(--kg-blue-light);">烤全羊</span>
+                    <span style="color:var(--kg-text-dim);">≈</span>
+                    <span style="color:var(--kg-purple-light);">额吉炭火烤全羊</span>
+                    <span class="fusion-score mid">78%</span>
+                </div>
+            </div>
+
+            <button class="kg-btn kg-btn-ghost fusion-step-btn" onclick="resetFusion()" style="margin-top:8px;">
+                <i class="fas fa-redo"></i> 重置
+            </button>
+        </div>
+
+        <!-- 右侧：SOURCE_B -->
+        <div class="fusion-panel">
+            <div class="fusion-panel-header right">
+                <span class="fusion-panel-title"><i class="fas fa-database"></i> SOURCE_B</span>
+                <span style="font-size:0.7rem;color:var(--kg-purple-light);">大众点评风格</span>
+            </div>
+            <div class="fusion-graph">
+                <div id="fusion-right"></div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--kg-border);">
+                <div style="font-size:0.72rem;color:var(--kg-text-dim);margin-bottom:6px;">图谱统计</div>
+                <div style="display:flex;gap:12px;font-size:0.78rem;">
+                    <span><i class="fas fa-circle" style="font-size:0.5rem;color:var(--kg-purple-light)"></i> 实体 <strong id="rightNodes" style="color:var(--kg-white)">5</strong></span>
+                    <span><i class="fas fa-link" style="font-size:0.6rem;color:var(--kg-purple-light)"></i> 关系 <strong id="rightRels" style="color:var(--kg-white)">4</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部：融合结果 -->
+        <div style="grid-column:1/-1;">
+            <div class="fusion-panel" style="margin-top:8px;">
+                <div class="fusion-panel-header merged">
+                    <span class="fusion-panel-title"><i class="fas fa-project-diagram"></i> FUSED GRAPH</span>
+                    <span style="font-size:0.7rem;color:var(--kg-green-light);">统一知识图谱</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
+                    <div id="fusion-merged"></div>
+                    <div class="fusion-log" id="fusionLog">
+                        <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+                            <i class="fas fa-sitemap" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+                            融合日志将在此处显示
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── SOURCE_A 节点（马蜂窝风格）─
+const LEFT_NODES = [
+    { id: 'a1', name: '呼和浩特', type: 'location' },
+    { id: 'a2', name: '内蒙古博物院', type: 'attraction' },
+    { id: 'a3', name: '烤全羊', type: 'food' },
+    { id: 'a4', name: '2小时', type: 'meta' },
+    { id: 'a5', name: '150元', type: 'meta' },
+];
+const LEFT_LINKS = [
+    { source: 'a1', target: 'a2', type: '景点' },
+    { source: 'a1', target: 'a3', type: '美食' },
+    { source: 'a2', target: 'a4', type: '游览' },
+    { source: 'a3', target: 'a5', type: '消费' },
+];
+
+// ── SOURCE_B 节点（大众点评风格）─
+const RIGHT_NODES = [
+    { id: 'b1', name: '呼市', type: 'location' },
+    { id: 'b2', name: '内蒙古博物馆', type: 'attraction' },
+    { id: 'b3', name: '额吉炭火烤全羊', type: 'food' },
+    { id: 'b4', name: '4.8分', type: 'meta' },
+    { id: 'b5', name: '传统蒙餐', type: 'meta' },
+];
+const RIGHT_LINKS = [
+    { source: 'b1', target: 'b2', type: '景点' },
+    { source: 'b1', target: 'b3', type: '餐厅' },
+    { source: 'b2', target: 'b4', type: '评分' },
+    { source: 'b3', target: 'b5', type: '特色' },
+];
+
+const LEFT_COLOR = '#3a7bd5';
+const RIGHT_COLOR = '#7c4dff';
+const MERGE_COLOR = '#4caf7d';
+
+const TYPE_COLORS = {
+    location: '#3a7bd5',
+    attraction: '#2d8659',
+    food: '#c9920a',
+    meta: '#7a7a8c',
+};
+
+let fusionSim, fusionMergedSim;
+
+function initGraph(containerId, nodes, links, color) {
+    const el = document.getElementById(containerId);
+    const W = el.clientWidth || 300;
+    const H = 320;
+
+    d3.select('#' + containerId).selectAll('*').remove();
+
+    const svg = d3.select('#' + containerId)
+        .append('svg')
+        .attr('width', W)
+        .attr('height', H);
+
+    const defs = svg.append('defs');
+    defs.append('marker')
+        .attr('id', 'arr-' + containerId)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 24).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', color + '88');
+
+    const g = svg.append('g');
+
+    const link = g.append('g').selectAll('line')
+        .data(links).enter().append('line')
+        .attr('stroke', color + '55')
+        .attr('stroke-width', 1.5)
+        .attr('marker-end', `url(#arr-${containerId})`);
+
+    const linkLabel = g.append('g').selectAll('text')
+        .data(links).enter().append('text')
+        .text(d => d.type)
+        .attr('font-size', 9)
+        .attr('fill', color + 'aa')
+        .attr('text-anchor', 'middle');
+
+    const node = g.append('g').selectAll('g')
+        .data(nodes).enter().append('g')
+        .attr('cursor', 'pointer');
+
+    node.append('rect')
+        .attr('width', d => Math.max(d.name.length * 12 + 24, 70))
+        .attr('height', 28)
+        .attr('x', d => -(Math.max(d.name.length * 12 + 24, 70)) / 2)
+        .attr('y', -14)
+        .attr('rx', 5)
+        .attr('fill', d => TYPE_COLORS[d.type] || '#5b9cf6')
+        .attr('stroke', d => d3.color(TYPE_COLORS[d.type] || '#5b9cf6').brighter(0.3))
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 120).duration(500).attr('opacity', 1);
+
+    node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', 11)
+        .attr('fill', '#fff')
+        .attr('font-weight', '500')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 120 + 200).duration(400).attr('opacity', 1);
+
+    const sim = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(90))
+        .force('charge', d3.forceManyBody().strength(-250))
+        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('collision', d3.forceCollide(28))
+        .on('tick', () => {
+            link
+                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            linkLabel
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2 - 7);
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+
+    return { svg, g, sim };
+}
+
+function initFusionMerged() {
+    const el = document.getElementById('fusion-merged');
+    const W = el.clientWidth || 700;
+    const H = 320;
+
+    d3.select('#fusion-merged').selectAll('*').remove();
+
+    const svg = d3.select('#fusion-merged')
+        .append('svg')
+        .attr('width', W)
+        .attr('height', H);
+
+    svg.append('defs').append('marker')
+        .attr('id', 'arr-merged')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 24).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', MERGE_COLOR + '88');
+
+    const g = svg.append('g');
+    const mergedG = g.append('g').attr('class', 'merged-content');
+    const mergeLineG = g.append('g').attr('class', 'merge-lines');
+
+    fusionMergedSim = { svg, g, mergedG, mergeLineG, W, H };
+}
+
+function runStep1() {
+    const status = document.getElementById('fusionStatus');
+    const statusText = document.getElementById('fusionStatusText');
+    const log = document.getElementById('fusionLog');
+
+    status.style.background = 'rgba(58,123,213,0.1)';
+    status.querySelector('.fusion-status-dot').style.background = LEFT_COLOR;
+    statusText.textContent = '正在对齐...';
+    statusText.style.color = LEFT_COLOR;
+
+    log.innerHTML = '';
+    const items = [
+        { icon: '🔍', color: LEFT_COLOR, text: '正在计算实体相似度 (Jaccard + 编辑距离)...' },
+        { icon: '✅', color: '#4caf7d', text: '「呼和浩特」≈「呼市」 相似度 95% ✓' },
+        { icon: '✅', color: '#4caf7d', text: '「内蒙古博物院」≈「内蒙古博物馆」 相似度 92% ✓' },
+        { icon: '⚠', color: '#ffd60a', text: '「烤全羊」≈「额吉炭火烤全羊」 相似度 78% (需人工确认)' },
+        { icon: '📋', color: '#7c4dff', text: '找到 3 个候选对齐实体对，1 个待确认' },
+    ];
+
+    items.forEach((item, i) => {
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = 'fusion-log-item';
+            div.innerHTML = `
+                <div class="fusion-log-icon" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">${i + 1}</div>
+                <div class="fusion-log-text">${item.text}</div>
+            `;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }, i * 500);
+    });
+
+    document.getElementById('step1Btn').disabled = true;
+    document.getElementById('step1Btn').style.opacity = '0.4';
+
+    setTimeout(() => {
+        document.getElementById('step2Btn').disabled = false;
+        document.getElementById('step2Btn').style.opacity = '1';
+        document.getElementById('step2Btn').classList.remove('kg-btn-ghost');
+        document.getElementById('step2Btn').classList.add('kg-btn-primary');
+    }, items.length * 500 + 300);
+}
+
+function runStep2() {
+    const log = document.getElementById('fusionLog');
+    const status = document.getElementById('fusionStatus');
+    const statusText = document.getElementById('fusionStatusText');
+
+    status.style.background = 'rgba(124,77,255,0.1)';
+    status.querySelector('.fusion-status-dot').style.background = RIGHT_COLOR;
+    statusText.textContent = '正在融合...';
+    statusText.style.color = RIGHT_COLOR;
+
+    const items = [
+        { icon: '🔄', color: RIGHT_COLOR, text: '合并「呼和浩特」+「呼市」→ 实体节点 A1' },
+        { icon: '🔄', color: RIGHT_COLOR, text: '合并「内蒙古博物院」+「内蒙古博物馆」→ 实体节点 A2' },
+        { icon: '🔄', color: '#ffd60a', text: '「烤全羊」与「额吉炭火烤全羊」保留为同义词对' },
+        { icon: '🔗', color: '#4caf7d', text: '重建关系：合并后共 6 个实体，8 条关系' },
+    ];
+
+    items.forEach((item, i) => {
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = 'fusion-log-item';
+            div.innerHTML = `
+                <div class="fusion-log-icon" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">${i + 5}</div>
+                <div class="fusion-log-text">${item.text}</div>
+            `;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+
+            if (i === items.length - 1) {
+                renderMergedGraph();
+            }
+        }, i * 600);
+    });
+
+    document.getElementById('step2Btn').disabled = true;
+    document.getElementById('step2Btn').style.opacity = '0.4';
+
+    setTimeout(() => {
+        document.getElementById('step3Btn').disabled = false;
+        document.getElementById('step3Btn').style.opacity = '1';
+        document.getElementById('step3Btn').classList.remove('kg-btn-ghost');
+        document.getElementById('step3Btn').classList.add('kg-btn-primary');
+    }, items.length * 600 + 300);
+}
+
+function renderMergedGraph() {
+    initFusionMerged();
+    const { mergedG, mergeLineG, W, H } = fusionMergedSim;
+
+    const MERGED_NODES = [
+        { id: 'm1', name: '呼和浩特·呼市', type: 'location', merged: true },
+        { id: 'm2', name: '内蒙古博物院·馆', type: 'attraction', merged: true },
+        { id: 'm3', name: '烤全羊·额吉', type: 'food', merged: true },
+        { id: 'm4', name: '2小时', type: 'meta' },
+        { id: 'm5', name: '150元', type: 'meta' },
+        { id: 'm6', name: '4.8分', type: 'meta' },
+        { id: 'm7', name: '传统蒙餐', type: 'meta' },
+    ];
+
+    const MERGED_LINKS = [
+        { source: 'm1', target: 'm2', type: '景点' },
+        { source: 'm1', target: 'm3', type: '美食' },
+        { source: 'm2', target: 'm4', type: '游览' },
+        { source: 'm3', target: 'm5', type: '消费' },
+        { source: 'm2', target: 'm6', type: '评分' },
+        { source: 'm3', target: 'm7', type: '特色' },
+    ];
+
+    // 双色边框节点（已融合）
+    const node = mergedG.append('g').selectAll('g')
+        .data(MERGED_NODES).enter().append('g')
+        .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
+
+    node.append('rect')
+        .attr('width', d => Math.max(d.name.length * 12 + 30, 80))
+        .attr('height', d => d.merged ? 30 : 28)
+        .attr('x', d => -(Math.max(d.name.length * 12 + 30, 80)) / 2)
+        .attr('y', d => d.merged ? -15 : -14)
+        .attr('rx', d => d.merged ? 8 : 5)
+        .attr('fill', d => TYPE_COLORS[d.type] || '#5b9cf6')
+        .attr('stroke', d => d.merged ? MERGE_COLOR : d3.color(TYPE_COLORS[d.type] || '#5b9cf6').brighter(0.3))
+        .attr('stroke-width', d => d.merged ? 2.5 : 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100).duration(500).attr('opacity', 1);
+
+    node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', 11)
+        .attr('fill', '#fff')
+        .attr('font-weight', '500')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100 + 200).duration(400).attr('opacity', 1);
+
+    // 融合节点发光特效
+    node.filter(d => d.merged)
+        .append('circle')
+        .attr('r', 20)
+        .attr('fill', 'none')
+        .attr('stroke', MERGE_COLOR)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100 + 600).duration(600)
+        .attr('opacity', 0.3)
+        .transition().delay(800).duration(400)
+        .attr('opacity', 0.15);
+
+    const link = mergedG.append('g').selectAll('line')
+        .data(MERGED_LINKS).enter().append('line')
+        .attr('stroke', MERGE_COLOR + '55')
+        .attr('stroke-width', 1.5)
+        .attr('marker-end', 'url(#arr-merged)');
+
+    const linkLabel = mergedG.append('g').selectAll('text')
+        .data(MERGED_LINKS).enter().append('text')
+        .text(d => d.type)
+        .attr('font-size', 9)
+        .attr('fill', MERGE_COLOR + 'aa')
+        .attr('text-anchor', 'middle');
+
+    const sim = d3.forceSimulation(MERGED_NODES)
+        .force('link', d3.forceLink(MERGED_LINKS).id(d => d.id).distance(100))
+        .force('charge', d3.forceManyBody().strength(-280))
+        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('collision', d3.forceCollide(30))
+        .on('tick', () => {
+            link
+                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            linkLabel
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2 - 7);
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+}
+
+function runStep3() {
+    const log = document.getElementById('fusionLog');
+    const status = document.getElementById('fusionStatus');
+    const statusText = document.getElementById('fusionStatusText');
+
+    status.style.background = 'rgba(76,175,80,0.1)';
+    status.querySelector('.fusion-status-dot').style.background = '#4caf7d';
+    statusText.textContent = '融合完成';
+    statusText.style.color = '#4caf7d';
+
+    const items = [
+        { icon: '🧠', color: '#4caf7d', text: '执行跨图谱推理：基于融合后的图谱进行知识补全...' },
+        { icon: '💡', color: '#4caf7d', text: '推理发现：呼和浩特旅游热度与美食数量正相关 (r=0.82)' },
+        { icon: '📊', color: '#4caf7d', text: '推荐路径：呼和浩特 → 内蒙古博物院 → 烤全羊（评分 4.8）' },
+        { icon: '✅', color: '#4caf7d', text: '融合完成！统一知识图谱包含 7 个实体、8 条关系' },
+    ];
+
+    items.forEach((item, i) => {
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = 'fusion-log-item';
+            div.innerHTML = `
+                <div class="fusion-log-icon" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">${i + 9}</div>
+                <div class="fusion-log-text">${item.text}</div>
+            `;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }, i * 500);
+    });
+
+    document.getElementById('step3Btn').disabled = true;
+    document.getElementById('step3Btn').style.opacity = '0.4';
+}
+
+function resetFusion() {
+    ['step1Btn','step2Btn','step3Btn'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    });
+    document.getElementById('step1Btn').classList.add('kg-btn-primary');
+    document.getElementById('step1Btn').classList.remove('kg-btn-ghost');
+    document.getElementById('step2Btn').classList.remove('kg-btn-primary');
+    document.getElementById('step2Btn').classList.add('kg-btn-ghost');
+    document.getElementById('step3Btn').classList.remove('kg-btn-primary');
+    document.getElementById('step3Btn').classList.add('kg-btn-ghost');
+
+    const status = document.getElementById('fusionStatus');
+    status.style.background = 'rgba(0,0,0,0.2)';
+    status.querySelector('.fusion-status-dot').style.background = 'var(--kg-text-dim)';
+    statusText = document.getElementById('fusionStatusText');
+    statusText.textContent = '等待开始';
+    statusText.style.color = 'var(--kg-text-dim)';
+
+    document.getElementById('fusionLog').innerHTML = `
+        <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+            <i class="fas fa-sitemap" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+            融合日志将在此处显示
+        </div>`;
+
+    initGraph('fusion-left', JSON.parse(JSON.stringify(LEFT_NODES)), JSON.parse(JSON.stringify(LEFT_LINKS)), LEFT_COLOR);
+    initGraph('fusion-right', JSON.parse(JSON.stringify(RIGHT_NODES)), JSON.parse(JSON.stringify(RIGHT_LINKS)), RIGHT_COLOR);
+    initFusionMerged();
+}
+
+window.addEventListener('load', () => {
+    initGraph('fusion-left', JSON.parse(JSON.stringify(LEFT_NODES)), JSON.parse(JSON.stringify(LEFT_LINKS)), LEFT_COLOR);
+    initGraph('fusion-right', JSON.parse(JSON.stringify(RIGHT_NODES)), JSON.parse(JSON.stringify(RIGHT_LINKS)), RIGHT_COLOR);
+    initFusionMerged();
+});
+window.addEventListener('resize', () => {
+    initGraph('fusion-left', JSON.parse(JSON.stringify(LEFT_NODES)), JSON.parse(JSON.stringify(LEFT_LINKS)), LEFT_COLOR);
+    initGraph('fusion-right', JSON.parse(JSON.stringify(RIGHT_NODES)), JSON.parse(JSON.stringify(RIGHT_LINKS)), RIGHT_COLOR);
+    initFusionMerged();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>负载预测 — 云计算</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        .cyber-body { min-height: 100vh; }
+        .lp-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+        .lp-chart-area {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 20px;
+            position: relative;
+        }
+        .lp-boundary-label {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            border: 1px solid var(--neon-pink);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 0.65rem;
+            color: var(--neon-pink);
+            font-family: var(--font-mono);
+            letter-spacing: 1px;
+            z-index: 5;
+            text-shadow: var(--glow-pink);
+        }
+        .lp-chart-canvas { position: relative; height: 320px; }
+        .lp-scan-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,45,120,0.25), transparent);
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+            z-index: 4;
+        }
+        .lp-range-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .lp-range-tab {
+            padding: 6px 16px;
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            background: transparent;
+        }
+        .lp-range-tab:hover { border-color: var(--neon-pink); color: var(--neon-pink); }
+        .lp-range-tab.active { border-color: var(--neon-pink); color: var(--neon-pink); background: rgba(255,45,120,0.08); }
+        .lp-right-panel { display: flex; flex-direction: column; gap: 16px; }
+        .lp-metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .lp-metric-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 14px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .lp-metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+        .lp-metric-card.cyan::before { background: var(--neon-cyan); }
+        .lp-metric-card.pink::before { background: var(--neon-pink); }
+        .lp-metric-card.green::before { background: var(--neon-green); }
+        .lp-metric-card.yellow::before { background: var(--neon-yellow); }
+        .lp-metric-val {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+            display: block;
+        }
+        .lp-metric-val.cyan { color: var(--neon-cyan); text-shadow: var(--glow-cyan); }
+        .lp-metric-val.pink { color: var(--neon-pink); text-shadow: var(--glow-pink); }
+        .lp-metric-val.green { color: var(--neon-green); text-shadow: var(--glow-green); }
+        .lp-metric-val.yellow { color: var(--neon-yellow); text-shadow: var(--glow-yellow); }
+        .lp-metric-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 6px;
+            display: block;
+        }
+        .lp-progress-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .lp-progress-row:last-child { margin-bottom: 0; }
+        .lp-progress-label { font-size: 0.75rem; color: var(--text-secondary); min-width: 50px; }
+        .lp-progress-wrap { flex: 1; }
+        .lp-progress-num { font-size: 0.72rem; color: var(--neon-green); font-weight: 600; margin-bottom: 3px; font-family: var(--font-mono); }
+        .lp-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .lp-status-badge.active {
+            background: rgba(48,209,88,0.15);
+            color: var(--neon-green);
+            border: 1px solid rgba(48,209,88,0.3);
+        }
+        .lp-legend-inline {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .lp-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        .lp-legend-line {
+            width: 24px;
+            height: 2px;
+            border-radius: 1px;
+        }
+        @media (max-width: 900px) {
+            .lp-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
+<div class="cyber-container cyber-main">
+
+    <div class="cyber-title" style="margin-bottom:8px;">
+        <i class="fas fa-chart-bar"></i>
+        负载预测
+        <span class="tag" style="color:var(--neon-pink);border-color:var(--neon-pink);">CLOUD COMPUTING</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:24px;line-height:1.6;">
+        基于深度学习模型的时间序列预测，灰色区域为历史数据，粉色区域为模型预测结果及置信区间
+    </p>
+
+    <div class="lp-layout">
+        <!-- 左侧：预测图表 -->
+        <div class="lp-chart-area">
+            <div class="lp-range-tabs">
+                <button class="lp-range-tab active" onclick="switchRange(1,this)">预测 1h</button>
+                <button class="lp-range-tab" onclick="switchRange(6,this)">预测 6h</button>
+                <button class="lp-range-tab" onclick="switchRange(24,this)">预测 24h</button>
+                <span style="margin-left:auto;font-size:0.72rem;color:var(--text-secondary);align-self:center;font-family:var(--font-mono);">
+                    <i class="fas fa-microchip" style="margin-right:4px;color:var(--neon-cyan);"></i> LSTM 模型 · 准确率 94.7%
+                </span>
+            </div>
+            <div class="lp-boundary-label">▶ PREDICTION BOUNDARY</div>
+            <div class="lp-chart-canvas">
+                <canvas id="lpChart"></canvas>
+                <div class="lp-scan-line" style="top:0;"></div>
+            </div>
+            <div class="lp-legend-inline" style="margin-top:12px;">
+                <div class="lp-legend-item">
+                    <div class="lp-legend-line" style="background:#00f5ff;"></div>
+                    历史数据
+                </div>
+                <div class="lp-legend-item">
+                    <div class="lp-legend-line" style="background:#ff2d78;border-top:2px dashed #ff2d78;"></div>
+                    预测值
+                </div>
+                <div class="lp-legend-item">
+                    <div class="lp-legend-line" style="background:rgba(255,45,120,0.2);height:8px;border-radius:4px;"></div>
+                    置信区间
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：指标 -->
+        <div class="lp-right-panel">
+            <div class="cyber-terminal">
+                <div class="cyber-terminal-header">
+                    <div class="cyber-terminal-dots">
+                        <div class="cyber-terminal-dot red"></div>
+                        <div class="cyber-terminal-dot yellow"></div>
+                        <div class="cyber-terminal-dot green"></div>
+                    </div>
+                    <span class="cyber-terminal-title">prediction_engine</span>
+                </div>
+                <div class="cyber-terminal-body" id="lpTerminal">
+                    <div class="term-line">
+                        <span class="term-prompt">$</span>
+                        <span class="term-text cyan"> ./predict --model lstm_v3 --horizon 1h</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text dim"> Loading model weights... lstm_v3.pth</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text dim"> Input window: 2880 timesteps (48h)</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text green"> Inference complete · 60 steps ahead</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text pink"> MAE: 3.28% · RMSE: 4.71% · R²: 0.947</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lp-status-badge active">
+                <i class="fas fa-circle" style="font-size:0.5rem;"></i>
+                SYSTEM ACTIVE · 实时预测中
+            </div>
+
+            <div class="lp-metric-grid">
+                <div class="lp-metric-card cyan">
+                    <span class="lp-metric-val cyan" id="lpMAE">3.28%</span>
+                    <span class="lp-metric-label">MAE</span>
+                </div>
+                <div class="lp-metric-card pink">
+                    <span class="lp-metric-val pink" id="lpRMSE">4.71%</span>
+                    <span class="lp-metric-label">RMSE</span>
+                </div>
+                <div class="lp-metric-card green">
+                    <span class="lp-metric-val green" id="lpR2">0.947</span>
+                    <span class="lp-metric-label">R² Score</span>
+                </div>
+                <div class="lp-metric-card yellow">
+                    <span class="lp-metric-val yellow" id="lpMAPE">3.42%</span>
+                    <span class="lp-metric-label">MAPE</span>
+                </div>
+            </div>
+
+            <div class="cyber-card">
+                <div style="font-size:0.75rem;color:var(--neon-green);margin-bottom:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                    <i class="fas fa-bolt" style="margin-right:6px;"></i> 预测进度
+                </div>
+                <div class="lp-progress-row">
+                    <span class="lp-progress-label">MAE</span>
+                    <div class="lp-progress-wrap">
+                        <div class="lp-progress-num">目标 &lt; 5%</div>
+                        <div class="cyber-progress"><div class="cyber-progress-bar cyan" style="width:65%;"></div></div>
+                    </div>
+                </div>
+                <div class="lp-progress-row">
+                    <span class="lp-progress-label">RMSE</span>
+                    <div class="lp-progress-wrap">
+                        <div class="lp-progress-num">目标 &lt; 6%</div>
+                        <div class="cyber-progress"><div class="cyber-progress-bar pink" style="width:78%;"></div></div>
+                    </div>
+                </div>
+                <div class="lp-progress-row">
+                    <span class="lp-progress-label">R²</span>
+                    <div class="lp-progress-wrap">
+                        <div class="lp-progress-num">目标 > 0.90</div>
+                        <div class="cyber-progress"><div class="cyber-progress-bar green" style="width:94.7%;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let lpChart;
+let predictHorizon = 1;
+
+function generatePredictionData(horizon) {
+    const historyPoints = 40;
+    const futurePoints = horizon * 5;
+    const allLabels = [];
+    const historyData = [];
+    const futureData = [];
+    const upperBound = [];
+    const lowerBound = [];
+
+    const now = Date.now();
+    for (let i = 0; i < historyPoints; i++) {
+        const t = new Date(now - (historyPoints - i) * 60000);
+        allLabels.push(t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+        let v = 68 + Math.sin(i / 6 * Math.PI) * 15 + (Math.random() - 0.5) * 8;
+        historyData.push(parseFloat(v.toFixed(1)));
+    }
+
+    for (let i = 0; i < futurePoints; i++) {
+        const t = new Date(now + (i + 1) * 60000);
+        allLabels.push(t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+        const base = historyData[historyData.length - 1] + (Math.sin((historyPoints + i) / 6 * Math.PI) * 15);
+        const noise = (Math.random() - 0.5) * 6;
+        const trend = (i / futurePoints) * 5;
+        let v = base + noise + trend;
+        v = Math.max(40, Math.min(95, v));
+        futureData.push(parseFloat(v.toFixed(1)));
+        upperBound.push(parseFloat((v + 5).toFixed(1)));
+        lowerBound.push(parseFloat((v - 5).toFixed(1)));
+    }
+
+    return { allLabels, historyData, futureData, upperBound, lowerBound, historyPoints };
+}
+
+function initPredictionChart(horizon) {
+    const ctx = document.getElementById('lpChart').getContext('2d');
+    const { allLabels, historyData, futureData, upperBound, lowerBound, historyPoints } = generatePredictionData(horizon);
+
+    if (lpChart) lpChart.destroy();
+
+    const historyLabels = allLabels.slice(0, historyPoints);
+    const futureLabels = allLabels.slice(historyPoints);
+
+    lpChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {
+                    label: '预测区间上界',
+                    data: [...new Array(historyPoints).fill(null), ...upperBound],
+                    borderColor: 'rgba(255,45,120,0.3)',
+                    backgroundColor: 'rgba(255,45,120,0.06)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    borderWidth: 1,
+                    tension: 0.4,
+                },
+                {
+                    label: '预测值',
+                    data: [...new Array(historyPoints).fill(null), ...futureData],
+                    borderColor: '#ff2d78',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#ff2d78',
+                    fill: false,
+                    tension: 0.4,
+                },
+                {
+                    label: '预测区间下界',
+                    data: [...new Array(historyPoints).fill(null), ...lowerBound],
+                    borderColor: 'rgba(255,45,120,0.3)',
+                    backgroundColor: false,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                    tension: 0.4,
+                },
+                {
+                    label: '历史数据',
+                    data: [...historyData, ...new Array(futureData.length).fill(null)],
+                    borderColor: '#00f5ff',
+                    backgroundColor: 'rgba(0,245,255,0.06)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#00f5ff',
+                    fill: true,
+                    tension: 0.4,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    titleColor: '#e0e0e0',
+                    bodyColor: '#b0b0b0',
+                    borderColor: 'rgba(0,245,255,0.3)',
+                    borderWidth: 1,
+                    padding: 10,
+                    filter: item => item.dataset.label === '历史数据' || item.dataset.label === '预测值',
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        line1: {
+                            type: 'line',
+                            xMin: historyPoints - 1,
+                            xMax: historyPoints - 1,
+                            borderColor: 'rgba(255,45,120,0.5)',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            label: {
+                                display: true,
+                                content: '预测边界',
+                                color: '#ff2d78',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(0,245,255,0.05)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.35)',
+                        font: { family: "'JetBrains Mono', monospace", size: 9 },
+                        maxTicksLimit: 10,
+                        maxRotation: 0,
+                    }
+                },
+                y: {
+                    min: 30,
+                    max: 100,
+                    grid: { color: 'rgba(0,245,255,0.05)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.35)',
+                        font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        callback: v => v + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function switchRange(horizon, el) {
+    predictHorizon = horizon;
+    document.querySelectorAll('.lp-range-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    initPredictionChart(horizon);
+}
+
+// 动态更新
+let lpLiveInterval;
+function startLivePrediction() {
+    lpLiveInterval = setInterval(() => {
+        if (!lpChart) return;
+        const { futureData, upperBound, lowerBound } = generatePredictionData(predictHorizon);
+        lpChart.data.datasets[0].data = [...new Array(40).fill(null), ...upperBound];
+        lpChart.data.datasets[1].data = [...new Array(40).fill(null), ...futureData];
+        lpChart.data.datasets[2].data = [...new Array(40).fill(null), ...lowerBound];
+        lpChart.update('none');
+    }, 3000);
+}
+
+window.addEventListener('load', () => {
+    initPredictionChart(1);
+    startLivePrediction();
+});
+</script>
+</body>
+</html>

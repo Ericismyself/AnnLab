@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>异常检测 — 云计算</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        .cyber-body { min-height: 100vh; }
+        .ad-alarm-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 9997;
+            animation: none;
+        }
+        .ad-alarm-overlay.active {
+            animation: alarmFlash 0.6s infinite;
+        }
+        @keyframes alarmFlash {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(255, 45, 120, 0.05); }
+        }
+        .ad-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+        .ad-chart-area {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 20px;
+            position: relative;
+        }
+        .ad-alert-banner {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255,45,120,0.15);
+            border: 1px solid var(--neon-pink);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--neon-pink);
+            font-family: var(--font-mono);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            z-index: 5;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.3s ease;
+            text-shadow: var(--glow-pink);
+        }
+        .ad-alert-banner.active {
+            opacity: 1;
+            transform: scale(1);
+            animation: alertPulse 0.8s infinite;
+        }
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(255,45,120,0.4); }
+            50% { box-shadow: 0 0 20px rgba(255,45,120,0.7), 0 0 40px rgba(255,45,120,0.3); }
+        }
+        .ad-alert-banner i { animation: blink 0.5s infinite; }
+        .ad-scan-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(48,209,88,0.25), transparent);
+            animation: adScan 2s linear infinite;
+            pointer-events: none;
+            z-index: 4;
+        }
+        @keyframes adScan {
+            0% { top: 60px; opacity: 1; }
+            100% { top: 100%; opacity: 0.3; }
+        }
+        .ad-chart-canvas { position: relative; height: 300px; }
+        .ad-trigger-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .ad-trigger-btn {
+            padding: 6px 14px;
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            background: transparent;
+        }
+        .ad-trigger-btn:hover { border-color: var(--neon-pink); color: var(--neon-pink); }
+        .ad-trigger-btn.cpu { }
+        .ad-trigger-btn.mem { }
+        .ad-trigger-btn.net { }
+        .ad-trigger-btn.spike { }
+        .ad-right-panel { display: flex; flex-direction: column; gap: 16px; }
+        .ad-stat-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .ad-stat-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 14px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .ad-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+        .ad-stat-card.green::before { background: var(--neon-green); }
+        .ad-stat-card.red::before { background: var(--neon-pink); }
+        .ad-stat-card.yellow::before { background: var(--neon-yellow); }
+        .ad-stat-card.cyan::before { background: var(--neon-cyan); }
+        .ad-stat-num {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+            display: block;
+        }
+        .ad-stat-num.green { color: var(--neon-green); text-shadow: var(--glow-green); }
+        .ad-stat-num.red { color: var(--neon-pink); text-shadow: var(--glow-pink); }
+        .ad-stat-num.yellow { color: var(--neon-yellow); text-shadow: var(--glow-yellow); }
+        .ad-stat-num.cyan { color: var(--neon-cyan); text-shadow: var(--glow-cyan); }
+        .ad-stat-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 6px;
+            display: block;
+        }
+        .ad-log-area {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .ad-log-area::-webkit-scrollbar { width: 4px; }
+        .ad-log-area::-webkit-scrollbar-thumb { background: var(--neon-green); border-radius: 2px; }
+        .ad-log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.75rem;
+            animation: termFadeIn 0.3s ease;
+        }
+        .ad-log-item:last-child { border-bottom: none; }
+        .ad-log-time { color: var(--neon-green); font-family: var(--font-mono); min-width: 50px; flex-shrink: 0; opacity: 0.7; }
+        .ad-log-type {
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+        .ad-log-type.normal { background: rgba(48,209,88,0.15); color: var(--neon-green); }
+        .ad-log-type.warning { background: rgba(255,214,10,0.15); color: var(--neon-yellow); }
+        .ad-log-type.critical { background: rgba(255,45,120,0.15); color: var(--neon-pink); }
+        .ad-log-msg { color: var(--text-secondary); flex: 1; }
+        .ad-log-msg strong { color: var(--neon-pink); }
+        @media (max-width: 900px) {
+            .ad-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
+<div class="ad-alarm-overlay" id="adAlarmOverlay"></div>
+
+<div class="cyber-container cyber-main">
+
+    <div class="cyber-title" style="margin-bottom:8px;">
+        <i class="fas fa-exclamation-triangle"></i>
+        异常检测
+        <span class="tag" style="color:var(--neon-pink);border-color:var(--neon-pink);">CLOUD COMPUTING</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:24px;line-height:1.6;">
+        容器云环境下的资源异常实时检测与告警，绿色曲线为正常负载，红色高亮区域为检测到的异常
+    </p>
+
+    <div class="ad-layout">
+        <!-- 左侧：图表 -->
+        <div class="ad-chart-area">
+            <div class="ad-alert-banner" id="adAlertBanner">
+                <i class="fas fa-exclamation-triangle"></i>
+                ANOMALY DETECTED
+            </div>
+            <div class="ad-chart-canvas">
+                <canvas id="adChart"></canvas>
+                <div class="ad-scan-line" id="adScanLine"></div>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--text-secondary);">
+                    <div style="width:24px;height:2px;background:#30d158;border-radius:1px;"></div>
+                    正常负载
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--text-secondary);">
+                    <div style="width:24px;height:2px;background:var(--neon-pink);border-radius:1px;"></div>
+                    异常负载
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--text-secondary);">
+                    <div style="width:24px;height:8px;background:rgba(255,45,120,0.2);border-radius:4px;"></div>
+                    告警区间
+                </div>
+            </div>
+            <div class="ad-trigger-btns">
+                <button class="ad-trigger-btn cpu" onclick="triggerAnomaly('cpu')">
+                    <i class="fas fa-microchip" style="margin-right:4px;"></i> CPU 飙升
+                </button>
+                <button class="ad-trigger-btn mem" onclick="triggerAnomaly('mem')">
+                    <i class="fas fa-memory" style="margin-right:4px;"></i> 内存泄漏
+                </button>
+                <button class="ad-trigger-btn net" onclick="triggerAnomaly('net')">
+                    <i class="fas fa-network-wired" style="margin-right:4px;"></i> 网络异常
+                </button>
+                <button class="ad-trigger-btn spike" onclick="triggerAnomaly('spike')">
+                    <i class="fas fa-bolt" style="margin-right:4px;"></i> 抖动异常
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧：统计+日志 -->
+        <div class="ad-right-panel">
+            <div class="ad-stat-cards">
+                <div class="ad-stat-card green">
+                    <span class="ad-stat-num green" id="adNormalRate">98.2%</span>
+                    <span class="ad-stat-label">正常运行率</span>
+                </div>
+                <div class="ad-stat-card red">
+                    <span class="ad-stat-num red" id="adAlertCount">7</span>
+                    <span class="ad-stat-label">今日告警数</span>
+                </div>
+                <div class="ad-stat-card yellow">
+                    <span class="ad-stat-num yellow" id="adCpuPeak">73%</span>
+                    <span class="ad-stat-label">CPU 峰值</span>
+                </div>
+                <div class="ad-stat-card cyan">
+                    <span class="ad-stat-num cyan" id="adUptime">99.7%</span>
+                    <span class="ad-stat-label">可用率</span>
+                </div>
+            </div>
+
+            <div class="cyber-terminal">
+                <div class="cyber-terminal-header">
+                    <div class="cyber-terminal-dots">
+                        <div class="cyber-terminal-dot red"></div>
+                        <div class="cyber-terminal-dot yellow"></div>
+                        <div class="cyber-terminal-dot green"></div>
+                    </div>
+                    <span class="cyber-terminal-title">anomaly_alerts.log</span>
+                </div>
+                <div class="cyber-terminal-body ad-log-area" id="adLog" style="min-height:200px;">
+                    <!-- 动态插入 -->
+                </div>
+            </div>
+
+            <div class="cyber-terminal">
+                <div class="cyber-terminal-header">
+                    <div class="cyber-terminal-dots">
+                        <div class="cyber-terminal-dot red"></div>
+                        <div class="cyber-terminal-dot yellow"></div>
+                        <div class="cyber-terminal-dot green"></div>
+                    </div>
+                    <span class="cyber-terminal-title">detection_engine</span>
+                </div>
+                <div class="cyber-terminal-body" style="min-height:80px;">
+                    <div class="term-line">
+                        <span class="term-prompt">$</span>
+                        <span class="term-text cyan"> anomaly-detect --mode streaming</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text green"> Detector initialized · Isolation Forest v2</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text dim"> Threshold: 3σ · Window: 300s · Metric: multi</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text green"> <i class="fas fa-circle" style="font-size:0.5rem;margin-right:4px;"></i> Monitoring active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── 数据生成 ──
+function generateADData(anomalyType, anomalyStart) {
+    const labels = [];
+    const normalData = [];
+    const anomalyData = [];
+    const upperBand = [];
+    const lowerBand = [];
+    const anomalyFlag = [];
+    const now = Date.now();
+
+    for (let i = 0; i < 60; i++) {
+        const t = new Date(now - (59 - i) * 5000);
+        labels.push(t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        let base = 55 + Math.sin(i / 8 * Math.PI) * 12;
+        let noise = (Math.random() - 0.5) * 6;
+        let val = base + noise;
+        let isAnomaly = false;
+        const tFromStart = i - anomalyStart;
+
+        if (anomalyType === 'cpu' && tFromStart >= 0 && tFromStart < 8) {
+            val = 85 + Math.random() * 10;
+            isAnomaly = true;
+        } else if (anomalyType === 'mem' && tFromStart >= 0 && tFromStart < 15) {
+            val = 88 + tFromStart * 0.8;
+            isAnomaly = true;
+        } else if (anomalyType === 'net' && tFromStart >= 0 && tFromStart < 10) {
+            val = 10 + Math.random() * 5;
+            isAnomaly = true;
+        } else if (anomalyType === 'spike' && tFromStart >= 0 && tFromStart < 3) {
+            val = 92 + Math.random() * 6;
+            isAnomaly = true;
+        }
+
+        val = Math.max(5, Math.min(98, val));
+        normalData.push(null);
+        anomalyData.push(isAnomaly ? val : null);
+        upperBand.push(isAnomaly ? val + 8 : null);
+        lowerBand.push(isAnomaly ? Math.max(5, val - 8) : null);
+        anomalyFlag.push(isAnomaly ? val : null);
+    }
+
+    return { labels, normalData, anomalyData, upperBand, lowerBand, anomalyFlag };
+}
+
+let adChart;
+let currentAnomalyType = null;
+let anomalyStartIdx = 20;
+let alertCount = 7;
+
+function initADChart(type, startIdx) {
+    const ctx = document.getElementById('adChart').getContext('2d');
+    const { labels, normalData, anomalyData, upperBand, lowerBand } = generateADData(type, startIdx);
+
+    // 正常数据（从历史趋势生成）
+    for (let i = 0; i < labels.length; i++) {
+        if (normalData[i] === null) {
+            let base = 55 + Math.sin(i / 8 * Math.PI) * 12 + (Math.random() - 0.5) * 6;
+            normalData[i] = parseFloat(Math.max(30, Math.min(75, base)).toFixed(1));
+        }
+    }
+
+    if (adChart) adChart.destroy();
+
+    adChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: '告警区间',
+                    data: upperBand,
+                    borderColor: 'rgba(255,45,120,0.2)',
+                    backgroundColor: 'rgba(255,45,120,0.06)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    borderWidth: 1,
+                    tension: 0.4,
+                },
+                {
+                    label: '异常负载',
+                    data: anomalyData,
+                    borderColor: '#ff2d78',
+                    backgroundColor: 'rgba(255,45,120,0.15)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#ff2d78',
+                    fill: true,
+                    tension: 0.4,
+                    spanGaps: false,
+                },
+                {
+                    label: '正常负载',
+                    data: normalData,
+                    borderColor: '#30d158',
+                    backgroundColor: 'rgba(48,209,88,0.06)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#30d158',
+                    fill: true,
+                    tension: 0.4,
+                },
+                {
+                    label: '告警区间下界',
+                    data: lowerBand,
+                    borderColor: 'rgba(255,45,120,0.2)',
+                    pointRadius: 0,
+                    borderWidth: 1,
+                    tension: 0.4,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    borderColor: 'rgba(0,245,255,0.3)',
+                    borderWidth: 1,
+                    padding: 10,
+                    filter: item => item.parsed.y !== null,
+                    callbacks: {
+                        label: ctx => {
+                            if (ctx.dataset.label === '正常负载') return ` 正常: ${ctx.parsed.y.toFixed(1)}%`;
+                            if (ctx.dataset.label === '异常负载') return ` 异常: ${ctx.parsed.y.toFixed(1)}% ⚠`;
+                            return '';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(0,245,255,0.05)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.35)',
+                        font: { family: "'JetBrains Mono', monospace", size: 9 },
+                        maxTicksLimit: 8,
+                        maxRotation: 0,
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(0,245,255,0.05)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.35)',
+                        font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        callback: v => v + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function addADLog(type, msg) {
+    const log = document.getElementById('adLog');
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const typeClass = type === 'NORMAL' ? 'normal' : type === 'WARNING' ? 'warning' : 'critical';
+    const strong = type !== 'NORMAL' ? `<strong>${msg.split(':')[0]}:</strong> ${msg.split(':').slice(1).join(':')}` : msg;
+    const item = document.createElement('div');
+    item.className = 'ad-log-item';
+    item.innerHTML = `
+        <span class="ad-log-time">${time}</span>
+        <span class="ad-log-type ${typeClass}">${type}</span>
+        <span class="ad-log-msg">${strong}</span>
+    `;
+    log.insertBefore(item, log.firstChild);
+    if (log.children.length > 30) log.removeChild(log.lastChild);
+}
+
+function triggerAnomaly(type) {
+    const banner = document.getElementById('adAlertBanner');
+    const overlay = document.getElementById('adAlarmOverlay');
+    const scanLine = document.getElementById('adScanLine');
+
+    // 激活告警
+    banner.classList.add('active');
+    overlay.classList.add('active');
+    scanLine.style.background = 'linear-gradient(90deg, transparent, rgba(255,45,120,0.4), transparent)';
+
+    // 更新统计
+    alertCount++;
+    document.getElementById('adAlertCount').textContent = alertCount;
+    document.getElementById('adNormalRate').textContent = (100 - alertCount * 0.3).toFixed(1) + '%';
+
+    // CPU峰值
+    const cpuPeak = document.getElementById('adCpuPeak');
+    const newPeak = Math.floor(Math.random() * 15 + 80);
+    cpuPeak.textContent = newPeak + '%';
+
+    // 添加日志
+    const typeMsgs = {
+        cpu: { type: 'CRITICAL', msg: 'CPU 飙升: 使用率突破 85%，超过扩容阈值' },
+        mem: { type: 'CRITICAL', msg: '内存泄漏: 内存使用率持续上升，当前 92%' },
+        net: { type: 'WARNING', msg: '网络异常: 丢包率上升至 8.3%，延迟激增' },
+        spike: { type: 'CRITICAL', msg: '抖动异常: 检测到高频负载突变，振幅超阈值' },
+    };
+
+    const info = typeMsgs[type];
+    addADLog(info.type, info.msg);
+
+    // 重新渲染图表
+    initADChart(type, anomalyStartIdx);
+
+    // 5秒后自动恢复
+    setTimeout(() => {
+        banner.classList.remove('active');
+        overlay.classList.remove('active');
+        scanLine.style.background = 'linear-gradient(90deg, transparent, rgba(48,209,88,0.25), transparent)';
+        addADLog('NORMAL', '异常清除，指标恢复正常范围');
+        initADChart(null, -1);
+    }, 5000);
+}
+
+// 初始化日志
+const INIT_LOGS = [
+    { type: 'NORMAL', msg: '系统启动，指标正常' },
+    { type: 'NORMAL', msg: 'CPU 使用率稳定，均值 54%' },
+    { type: 'WARNING', msg: '检测到轻微抖动，已自动过滤' },
+    { type: 'NORMAL', msg: '内存使用率正常，GC 完成' },
+    { type: 'NORMAL', msg: '网络 I/O 稳定，无异常' },
+    { type: 'WARNING', msg: 'CPU 短暂峰值 72%，已自动恢复' },
+    { type: 'NORMAL', msg: '负载均衡正常，无异常告警' },
+    { type: 'CRITICAL', msg: '历史告警: CPU 飙升事件，峰值 88%' },
+];
+
+window.addEventListener('load', () => {
+    INIT_LOGS.forEach((l, i) => {
+        setTimeout(() => addADLog(l.type, l.msg), i * 150);
+    });
+    initADChart(null, -1);
+});
+
+// 实时滚动
+let adLiveInterval;
+function startADLive() {
+    adLiveInterval = setInterval(() => {
+        if (adChart && !document.getElementById('adAlertBanner').classList.contains('active')) {
+            const datasets = adChart.data.datasets;
+            const lastNormal = datasets[2].data[datasets[2].data.length - 1];
+            const newVal = lastNormal + (Math.random() - 0.5) * 4;
+            datasets[2].data.shift();
+            datasets[2].data.push(parseFloat(Math.max(30, Math.min(75, newVal)).toFixed(1)));
+            datasets[0].data.push(null);
+            datasets[1].data.push(null);
+            datasets[3].data.push(null);
+            datasets[0].data.shift();
+            datasets[1].data.shift();
+            datasets[3].data.shift();
+            adChart.update('none');
+        }
+    }, 1500);
+}
+window.addEventListener('load', startADLive);
+</script>
+</body>
+</html>

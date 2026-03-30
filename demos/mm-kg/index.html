@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态知识图谱</title>
+    <link rel="stylesheet" href="../../css/kg.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .mm-demo-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            align-items: start;
+        }
+        .mm-graph-area {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--kg-border);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            min-height: 520px;
+        }
+        #mm-graph { width: 100%; height: 520px; }
+        .mm-type-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid var(--kg-border);
+            flex-wrap: wrap;
+        }
+        .mm-type-tab {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            font-family: var(--font-sans);
+            font-weight: 500;
+        }
+        .mm-type-tab:hover { opacity: 0.8; }
+        .mm-type-tab.active { border-color: currentColor; }
+        .mm-type-tab.all { color: var(--kg-text); }
+        .mm-type-tab.image { color: #e91e63; }
+        .mm-type-tab.text { color: var(--kg-purple-light); }
+        .mm-type-tab.entity { color: var(--kg-blue-light); }
+        .mm-type-tab i { font-size: 0.65rem; }
+        .mm-detail-panel {
+            position: absolute;
+            top: 60px;
+            right: 12px;
+            width: 340px;
+            background: var(--kg-bg-card);
+            border: 1px solid var(--kg-border);
+            border-radius: 8px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            animation: kgFadeIn 0.25s ease;
+            overflow: hidden;
+        }
+        .mm-detail-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+        }
+        .mm-detail-img-placeholder {
+            width: 100%;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: rgba(255,255,255,0.2);
+        }
+        .mm-detail-body { padding: 14px; }
+        .mm-detail-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--kg-white);
+            margin-bottom: 6px;
+        }
+        .mm-detail-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .mm-detail-desc {
+            font-size: 0.82rem;
+            color: var(--kg-text);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .mm-detail-attrs { display: flex; flex-direction: column; gap: 6px; }
+        .mm-detail-attr {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        .mm-detail-attr i { color: var(--kg-blue-light); width: 14px; text-align: center; }
+        .mm-detail-attr span { color: var(--kg-text); }
+        .mm-detail-close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .mm-detail-close:hover { background: rgba(0,0,0,0.8); }
+        .mm-legend-bottom {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--kg-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+        .mm-legend-bottom .kg-legend-item { font-size: 0.72rem; margin-bottom: 4px; }
+        .mm-legend-bottom .kg-legend-item:last-child { margin-bottom: 0; }
+        .mm-right-panel { display: flex; flex-direction: column; gap: 16px; }
+        .mm-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .mm-stat-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--kg-border);
+            border-radius: 6px;
+            padding: 14px;
+            text-align: center;
+        }
+        .mm-stat-num {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--kg-blue-light);
+            line-height: 1;
+            display: block;
+        }
+        .mm-stat-label {
+            font-size: 0.68rem;
+            color: var(--kg-text-dim);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+        }
+        .mm-neighbor-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+        .mm-neighbor-list::-webkit-scrollbar { width: 4px; }
+        .mm-neighbor-list::-webkit-scrollbar-thumb { background: var(--kg-blue); border-radius: 2px; }
+        .mm-neighbor-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .mm-neighbor-item:hover { background: rgba(58,123,213,0.15); }
+        .mm-neighbor-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .mm-neighbor-info { flex: 1; }
+        .mm-neighbor-name { color: var(--kg-white); font-weight: 500; }
+        .mm-neighbor-rel { color: var(--kg-text-dim); font-size: 0.72rem; }
+        .mm-search-area {
+            display: flex;
+            gap: 8px;
+        }
+        .mm-search-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--kg-border);
+            border-radius: 6px;
+            color: var(--kg-text);
+            font-family: var(--font-sans);
+            font-size: 0.82rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .mm-search-input:focus { border-color: var(--kg-blue-light); }
+        .mm-search-input::placeholder { color: var(--kg-text-dim); }
+        .mm-search-btn {
+            padding: 8px 14px;
+            background: var(--kg-blue);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .mm-search-btn:hover { background: var(--kg-blue-light); }
+        @media (max-width: 900px) {
+            .mm-demo-layout { grid-template-columns: 1fr; }
+            #mm-graph { height: 380px; }
+            .mm-graph-area { min-height: 380px; }
+            .mm-detail-panel { width: calc(100% - 24px); }
+        }
+    </style>
+</head>
+<body>
+<div class="kg-grid-bg"></div>
+<div class="kg-container kg-main">
+
+    <div class="kg-page-header">
+        <h1 class="kg-page-title"><i class="fas fa-layer-group"></i>多模态知识图谱</h1>
+        <p class="kg-page-desc">融合文本、图像、知识的多模态知识图谱展示，点击节点查看图文详情与邻居关系</p>
+        <span class="kg-page-tag multi"><i class="fas fa-photo-video"></i> 多模态融合</span>
+    </div>
+
+    <div class="mm-demo-layout">
+        <div class="mm-graph-area">
+            <div class="mm-type-tabs">
+                <span class="mm-type-tab all active" onclick="filterNodes('all', this)">
+                    <i class="fas fa-border-all"></i> 全部
+                </span>
+                <span class="mm-type-tab image" onclick="filterNodes('image', this)">
+                    <i class="fas fa-image"></i> 图文节点
+                </span>
+                <span class="mm-type-tab text" onclick="filterNodes('text', this)">
+                    <i class="fas fa-file-alt"></i> 文本节点
+                </span>
+                <span class="mm-type-tab entity" onclick="filterNodes('entity', this)">
+                    <i class="fas fa-circle"></i> 实体节点
+                </span>
+                <span style="margin-left:auto;margin-top:auto;margin-bottom:auto;font-size:0.72rem;color:var(--kg-text-dim);">
+                    <i class="fas fa-info-circle" style="margin-right:4px;"></i>点击节点查看详情
+                </span>
+            </div>
+            <div id="mm-graph"></div>
+            <div class="mm-legend-bottom">
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#e91e63"></span> 🖼 图文节点（奶业/医疗/旅游）</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-purple)"></span> 📄 文本节点（政策/报告）</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-blue)"></span> 🔗 实体节点（机构/概念）</div>
+            </div>
+        </div>
+
+        <div class="mm-right-panel">
+            <div class="kg-card">
+                <div class="kg-section-title"><i class="fas fa-chart-pie"></i> 图谱统计</div>
+                <div class="mm-stats-grid">
+                    <div class="mm-stat-card">
+                        <span class="mm-stat-num" id="statNodes">12</span>
+                        <span class="mm-stat-label">实体总数</span>
+                    </div>
+                    <div class="mm-stat-card">
+                        <span class="mm-stat-num" id="statRels">18</span>
+                        <span class="mm-stat-label">关系总数</span>
+                    </div>
+                    <div class="mm-stat-card">
+                        <span class="mm-stat-num" style="color:#e91e63" id="statImg">5</span>
+                        <span class="mm-stat-label">图文节点</span>
+                    </div>
+                    <div class="mm-stat-card">
+                        <span class="mm-stat-num" style="color:var(--kg-purple)" id="statText">3</span>
+                        <span class="mm-stat-label">文本节点</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kg-card">
+                <div class="kg-section-title"><i class="fas fa-search"></i> 节点搜索</div>
+                <div class="mm-search-area">
+                    <input class="mm-search-input" id="mmSearch" placeholder="输入节点名称搜索..." oninput="searchNode()">
+                    <button class="mm-search-btn" onclick="searchNode()"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+
+            <div class="kg-card">
+                <div class="kg-section-title"><i class="fas fa-arrows-alt"></i> 邻居节点</div>
+                <div class="mm-neighbor-list" id="mmNeighborList">
+                    <div style="text-align:center;padding:30px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+                        <i class="fas fa-hand-pointer" style="font-size:1.2rem;margin-bottom:6px;display:block;opacity:0.4;"></i>
+                        点击图谱中的节点查看邻居
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const MM_NODES = [
+    { id: 'n1', name: '伊利实业集团', type: 'entity', desc: '中国乳制品行业龙头企业，总部位于内蒙古呼和浩特，业务涵盖原奶收购、乳制品加工及销售全产业链。', attrs: { '类型': '企业', '总部': '呼和浩特', '成立': '1993年', '员工': '6万+' }, img: 'https://picsum.photos/seed/yili/600/300' },
+    { id: 'n2', name: '安慕希酸奶', type: 'image', desc: '希腊风味酸奶，以高品质生鲜牛乳为原料，采用希腊传统工艺发酵，口感醇厚，深受消费者喜爱。', attrs: { '品牌': '伊利', '类型': '乳制品', '规格': '205g/瓶', '售价': '¥8.5' }, img: 'https://picsum.photos/seed/yogurt/600/300' },
+    { id: 'n3', name: '规模化牧场A', type: 'image', desc: '位于内蒙古黄金奶源带的现代化牧场，采用全自动化挤奶系统，实现从养殖到加工全程可追溯。', attrs: { '类型': '牧场', '规模': '5000头', '位置': '呼和浩特', '认证': '有机' }, img: 'https://picsum.photos/seed/farm/600/300' },
+    { id: 'n4', name: '2型糖尿病', type: 'entity', desc: '以胰岛素分泌不足或胰岛素抵抗为特征的代谢性疾病，是最常见的糖尿病类型，占所有糖尿病病例的90%以上。', attrs: { '科室': '内分泌科', '发病率': '10.4%', '并发症': '心血管疾病' }, img: 'https://picsum.photos/seed/diabetes/600/300' },
+    { id: 'n5', name: '内蒙古博物院', type: 'image', desc: '内蒙古自治区最大的博物馆，收藏文物近7万件，是了解草原文化的重要窗口，常设展厅涵盖历史、自然、民族等多个主题。', attrs: { '类型': '博物馆', '级别': '国家一级', '门票': '免费', '游览': '2-3小时' }, img: 'https://picsum.photos/seed/museum/600/300' },
+    { id: 'n6', name: '二甲双胍用药指南', type: 'text', desc: '二甲双胍是2型糖尿病一线用药，主要作用机制为抑制肝糖输出、改善胰岛素敏感性。常见不良反应包括胃肠道不适，少数患者可能出现维生素B12缺乏。', attrs: { '剂型': '片剂', '规格': '0.5g', '用法': '每日2-3次' }, img: null },
+    { id: 'n7', name: '呼和浩特旅游攻略', type: 'text', desc: '呼和浩特是内蒙古首府，推荐游览：内蒙古博物院（了解草原文化）、昭君墓（历史古迹）、敕勒川草原（自然风光）。最佳旅游季节为夏季7-9月。', attrs: { '建议天数': '2-3天', '最佳季节': '夏秋季', '交通': '飞机/高铁' }, img: null },
+    { id: 'n8', name: '供应链金融贷款', type: 'entity', desc: '基于核心企业信用，为上下游中小企业提供的融资服务，可缓解牧场等供应商的资金周转压力。', attrs: { '类型': '供应链金融', '期限': '3-12个月', '利率': '4.35%起' }, img: 'https://picsum.photos/seed/finance/600/300' },
+    { id: 'n9', name: '烤全羊', type: 'image', desc: '内蒙古传统名菜，选用草原放养的优质绵羊，古法炭火慢烤数小时，外酥里嫩，是招待贵客的最高礼遇。', attrs: { '类型': '传统美食', '人均': '150-200元', '推荐': '额吉炭火烤全羊' }, img: 'https://picsum.photos/seed/lamb/600/300' },
+    { id: 'n10', name: '生鲜牛乳检测报告', type: 'text', desc: '生鲜牛乳质量检测报告，包含蛋白质含量（≥3.0%）、脂肪含量（≥3.5%）、菌落总数（≤20万CFU/mL）等关键指标，是判断原料奶品质的重要依据。', attrs: { '蛋白质': '≥3.0%', '脂肪': '≥3.5%', '微生物': '合格' }, img: null },
+    { id: 'n11', name: '电商平台', type: 'entity', desc: '线上B2C销售平台，如天猫、京东等，为乳制品企业提供直达消费者的销售渠道。', attrs: { '类型': '电商', '覆盖': '全国', '优势': '物流快捷' }, img: 'https://picsum.photos/seed/ecommerce/600/300' },
+    { id: 'n12', name: '冠脉CT检查报告', type: 'text', desc: '冠状动脉CT血管成像（CTA）是无创检查冠心病的首选方法，可清晰显示冠状动脉狭窄程度及斑块性质。', attrs: { '类型': '影像检查', '用时': '10-15分钟', '准备': '空腹' }, img: null },
+];
+
+const MM_LINKS = [
+    { source: 'n1', target: 'n2', type: '生产' },
+    { source: 'n1', target: 'n3', type: '采购' },
+    { source: 'n1', target: 'n8', type: '提供' },
+    { source: 'n1', target: 'n11', type: '合作' },
+    { source: 'n2', target: 'n11', type: '销售' },
+    { source: 'n3', target: 'n10', type: '出具' },
+    { source: 'n4', target: 'n6', type: '用药' },
+    { source: 'n5', target: 'n7', type: '收录于' },
+    { source: 'n1', target: 'n5', type: '赞助' },
+    { source: 'n8', target: 'n3', type: '支持' },
+    { source: 'n9', target: 'n5', type: '邻近' },
+    { source: 'n11', target: 'n9', type: '推荐' },
+    { source: 'n4', target: 'n12', type: '检查' },
+    { source: 'n5', target: 'n9', type: '美食推荐' },
+    { source: 'n7', target: 'n9', type: '包含' },
+    { source: 'n2', target: 'n10', type: '原料' },
+];
+
+const MM_TYPE_COLORS = {
+    image: '#e91e63',
+    text: '#7c4dff',
+    entity: '#3a7bd5',
+};
+
+let mmSim, mmSvg, mmG;
+
+function initMMGraph(filter) {
+    const container = document.getElementById('mm-graph');
+    const W = container.clientWidth;
+    const H = container.clientHeight;
+
+    d3.select('#mm-graph').selectAll('*').remove();
+    mmSvg = d3.select('#mm-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0, 0, W, H]);
+
+    const defs = mmSvg.append('defs');
+    defs.append('marker')
+        .attr('id', 'mm-arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 28).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', 'rgba(58,123,213,0.5)');
+
+    // 节点发光效果
+    const filterDef = defs.append('filter').attr('id', 'glow');
+    filterDef.append('feGaussianBlur').attr('stdDeviation', 3).attr('result', 'coloredBlur');
+    const feMerge = filterDef.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    mmG = mmSvg.append('g');
+
+    const visibleNodes = filter === 'all' ? MM_NODES : MM_NODES.filter(n => n.type === filter);
+    const visibleIds = new Set(visibleNodes.map(n => n.id));
+    const visibleLinks = MM_LINKS.filter(l => visibleIds.has(l.source) && visibleIds.has(l.target));
+
+    renderMMGraph(visibleNodes, visibleLinks, W, H);
+}
+
+function renderMMGraph(nodes, links, W, H) {
+    mmG.selectAll('*').remove();
+
+    const link = mmG.append('g').selectAll('line')
+        .data(links).enter().append('line')
+        .attr('stroke', 'rgba(58,123,213,0.4)')
+        .attr('stroke-width', 1.5)
+        .attr('marker-end', 'url(#mm-arrow)');
+
+    const linkLabel = mmG.append('g').selectAll('text')
+        .data(links).enter().append('text')
+        .text(d => d.type)
+        .attr('font-size', 9)
+        .attr('fill', 'rgba(91,156,246,0.7)')
+        .attr('text-anchor', 'middle');
+
+    const node = mmG.append('g').selectAll('g')
+        .data(nodes).enter().append('g')
+        .attr('cursor', 'pointer')
+        .call(d3.drag()
+            .on('start', (e,d) => { if (!e.active) mmSim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+            .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
+            .on('end', (e,d) => { if (!e.active) mmSim.alphaTarget(0); d.fx=null; d.fy=null; }))
+        .on('click', (e, d) => { e.stopPropagation(); showDetail(d); highlightNeighbors(d); });
+
+    // 外发光环
+    node.append('circle')
+        .attr('r', 20)
+        .attr('fill', 'none')
+        .attr('stroke', d => MM_TYPE_COLORS[d.type])
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80).duration(600)
+        .attr('opacity', 0.25);
+
+    // 节点主体
+    node.append('rect')
+        .attr('width', d => Math.max(d.name.length * 13 + 28, 80))
+        .attr('height', 30)
+        .attr('x', d => -(Math.max(d.name.length * 13 + 28, 80)) / 2)
+        .attr('y', -15)
+        .attr('rx', d => d.type === 'image' ? 8 : 5)
+        .attr('fill', d => MM_TYPE_COLORS[d.type])
+        .attr('stroke', d => d3.color(MM_TYPE_COLORS[d.type]).brighter(0.4))
+        .attr('stroke-width', 1.5)
+        .attr('filter', 'url(#glow)')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80).duration(500)
+        .attr('opacity', 1);
+
+    // 节点图标
+    const typeIcons = { image: '🖼', text: '📄', entity: '🔗' };
+    node.append('text')
+        .text(d => typeIcons[d.type])
+        .attr('font-size', 11)
+        .attr('x', d => -(Math.max(d.name.length * 13 + 28, 80)) / 2 + 10)
+        .attr('y', 4)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80).duration(400)
+        .attr('opacity', 1);
+
+    // 节点文字
+    node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'start')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', 11)
+        .attr('fill', '#fff')
+        .attr('font-weight', '500')
+        .attr('x', d => -(Math.max(d.name.length * 13 + 28, 80)) / 2 + 24)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80 + 200).duration(400)
+        .attr('opacity', 1);
+
+    mmSim = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(110))
+        .force('charge', d3.forceManyBody().strength(-320))
+        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('collision', d3.forceCollide(35))
+        .on('tick', () => {
+            link
+                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            linkLabel
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2 - 8);
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+}
+
+function showDetail(d) {
+    const existing = document.getElementById('mmDetailPanel');
+    if (existing) existing.remove();
+
+    const col = MM_TYPE_COLORS[d.type];
+    const typeLabel = { image: '图文节点', text: '文本节点', entity: '实体节点' };
+
+    const panel = document.createElement('div');
+    panel.id = 'mmDetailPanel';
+    panel.className = 'mm-detail-panel';
+
+    let imgHTML;
+    if (d.img) {
+        imgHTML = `<img src="${d.img}" alt="${d.name}" class="mm-detail-img" onerror="this.style.display='none'">`;
+    } else {
+        const icons = { image: '🖼', text: '📄', entity: '🔗' };
+        imgHTML = `<div class="mm-detail-img-placeholder" style="background:${col}22;">${icons[d.type]}</div>`;
+    }
+
+    let attrsHTML = Object.entries(d.attrs || {}).map(([k, v]) =>
+        `<div class="mm-detail-attr"><i class="fas fa-tag"></i><span>${k}：${v}</span></div>`
+    ).join('');
+
+    panel.innerHTML = `
+        <button class="mm-detail-close" onclick="this.closest('#mmDetailPanel').remove()"><i class="fas fa-times"></i></button>
+        ${imgHTML}
+        <div class="mm-detail-body">
+            <div class="mm-detail-title">${d.name}</div>
+            <span class="mm-detail-type" style="background:${col}22;color:${col};border:1px solid ${col}44">
+                ${typeLabel[d.type]}
+            </span>
+            <div class="mm-detail-desc">${d.desc}</div>
+            <div class="mm-detail-attrs">${attrsHTML}</div>
+        </div>
+    `;
+    document.querySelector('.mm-graph-area').appendChild(panel);
+}
+
+function highlightNeighbors(d) {
+    const neighborIds = new Set();
+    const neighborLinks = [];
+    MM_LINKS.forEach(l => {
+        if (l.source === d.id || l.target === d.id) {
+            const other = l.source === d.id ? l.target : l.source;
+            neighborIds.add(other);
+            neighborLinks.push(l);
+        }
+    });
+
+    const list = document.getElementById('mmNeighborList');
+    list.innerHTML = '';
+
+    if (neighborLinks.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--kg-text-dim);font-size:0.8rem;">该节点暂无邻居</div>';
+        return;
+    }
+
+    neighborLinks.forEach(l => {
+        const otherId = l.source === d.id ? l.target : l.source;
+        const other = MM_NODES.find(n => n.id === otherId);
+        if (!other) return;
+        const col = MM_TYPE_COLORS[other.type];
+        const item = document.createElement('div');
+        item.className = 'mm-neighbor-item';
+        item.onclick = () => {
+            showDetail(other);
+            highlightNeighbors(other);
+        };
+        item.innerHTML = `
+            <div class="mm-neighbor-dot" style="background:${col};"></div>
+            <div class="mm-neighbor-info">
+                <div class="mm-neighbor-name">${other.name}</div>
+                <div class="mm-neighbor-rel">← ${l.type} →</div>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+function filterNodes(type, el) {
+    document.querySelectorAll('.mm-type-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    initMMGraph(type);
+    const panel = document.getElementById('mmDetailPanel');
+    if (panel) panel.remove();
+    document.getElementById('mmNeighborList').innerHTML = `
+        <div style="text-align:center;padding:30px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+            <i class="fas fa-hand-pointer" style="font-size:1.2rem;margin-bottom:6px;display:block;opacity:0.4;"></i>
+            点击图谱中的节点查看邻居
+        </div>`;
+}
+
+function searchNode() {
+    const query = document.getElementById('mmSearch').value.trim().toLowerCase();
+    if (!query) return;
+    const found = MM_NODES.find(n => n.name.toLowerCase().includes(query));
+    if (found) {
+        showDetail(found);
+        highlightNeighbors(found);
+    }
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.mm-detail-panel') && !e.target.closest('.mm-neighbor-item')) {
+        const panel = document.getElementById('mmDetailPanel');
+        if (panel) panel.remove();
+    }
+});
+
+window.addEventListener('load', () => initMMGraph('all'));
+window.addEventListener('resize', () => initMMGraph('all'));
+</script>
+</body>
+</html>

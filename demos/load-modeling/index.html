@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>负载建模 — 云计算</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        .cyber-body { min-height: 100vh; }
+        .lm-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+        .lm-chart-area {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 20px;
+            position: relative;
+        }
+        .lm-chart-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .lm-chart-tab {
+            padding: 6px 14px;
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            background: transparent;
+        }
+        .lm-chart-tab:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+        .lm-chart-tab.active { border-color: var(--neon-cyan); color: var(--neon-cyan); background: rgba(0,245,255,0.08); }
+        .lm-chart-tab.cpu.active { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+        .lm-chart-tab.mem.active { border-color: var(--neon-pink); color: var(--neon-pink); background: rgba(255,45,120,0.08); }
+        .lm-chart-tab.net.active { border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(191,90,242,0.08); }
+        .lm-chart-tab.qps.active { border-color: var(--neon-green); color: var(--neon-green); background: rgba(48,209,88,0.08); }
+        .lm-chart-tab.disk.active { border-color: var(--neon-yellow); color: var(--neon-yellow); background: rgba(255,214,10,0.08); }
+        .lm-chart-canvas { position: relative; height: 300px; }
+        .lm-scan-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0,245,255,0.3), transparent);
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+        .lm-right-panel { display: flex; flex-direction: column; gap: 16px; }
+        .lm-terminal-body .term-line { margin-bottom: 4px; }
+        .lm-model-card {
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .lm-model-header {
+            padding: 10px 14px;
+            background: rgba(0,245,255,0.05);
+            border-bottom: 1px solid var(--border-dim);
+            font-size: 0.8rem;
+            color: var(--neon-cyan);
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .lm-model-body { padding: 14px; }
+        .lm-model-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .lm-model-row:last-child { border-bottom: none; }
+        .lm-model-row .label { color: var(--text-secondary); }
+        .lm-model-row .val { color: var(--neon-cyan); font-weight: 600; font-family: var(--font-mono); }
+        .lm-model-row .val.pink { color: var(--neon-pink); }
+        .lm-model-row .val.green { color: var(--neon-green); }
+        .lm-model-row .val.yellow { color: var(--neon-yellow); }
+        .lm-type-display {
+            text-align: center;
+            padding: 16px;
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+        }
+        .lm-type-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .lm-type-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            text-shadow: var(--glow-cyan);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .lm-type-name.pink { color: var(--neon-pink); text-shadow: var(--glow-pink); }
+        .lm-type-name.purple { color: var(--neon-purple); text-shadow: var(--glow-purple); }
+        .lm-type-name.yellow { color: var(--neon-yellow); text-shadow: var(--glow-yellow); }
+        .lm-type-desc { font-size: 0.75rem; color: var(--text-secondary); margin-top: 6px; }
+        @media (max-width: 900px) {
+            .lm-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
+<div class="cyber-container cyber-main">
+
+    <div class="cyber-title" style="margin-bottom:8px;">
+        <i class="fas fa-chart-line"></i>
+        负载建模
+        <span class="tag" style="color:var(--neon-purple);border-color:var(--neon-purple);">CLOUD COMPUTING</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:24px;line-height:1.6;">
+        容器云环境下的工作负载特征分析与建模，支持 CPU / 内存 / 网络 I/O / QPS / 磁盘 I/O 五类指标的实时监控与类型识别
+    </p>
+
+    <div class="lm-layout">
+        <!-- 左侧：图表 -->
+        <div class="lm-chart-area">
+            <div class="lm-chart-tabs">
+                <button class="lm-chart-tab cpu active" onclick="switchChart('cpu',this)">CPU 使用率</button>
+                <button class="lm-chart-tab mem" onclick="switchChart('mem',this)">内存使用率</button>
+                <button class="lm-chart-tab net" onclick="switchChart('net',this)">网络 I/O</button>
+                <button class="lm-chart-tab qps" onclick="switchChart('qps',this)">请求 QPS</button>
+                <button class="lm-chart-tab disk" onclick="switchChart('disk',this)">磁盘 I/O</button>
+            </div>
+            <div class="lm-chart-canvas">
+                <canvas id="lmChart"></canvas>
+                <div class="lm-scan-line" style="top:0;"></div>
+            </div>
+        </div>
+
+        <!-- 右侧：终端+建模 -->
+        <div class="lm-right-panel">
+            <div class="cyber-terminal">
+                <div class="cyber-terminal-header">
+                    <div class="cyber-terminal-dots">
+                        <div class="cyber-terminal-dot red"></div>
+                        <div class="cyber-terminal-dot yellow"></div>
+                        <div class="cyber-terminal-dot green"></div>
+                    </div>
+                    <span class="cyber-terminal-title">load_modeling_terminal</span>
+                </div>
+                <div class="cyber-terminal-body" id="lmTerminal">
+                    <div class="term-line">
+                        <span class="term-prompt">$</span>
+                        <span class="term-text cyan"> ./load-model --data metrics.csv</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text dim"> Loading time series data... 2880 samples</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text dim"> Computing statistical features...</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text green"> Features extracted: mean, variance, peak, period</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text cyan"> Applying clustering algorithm (K-Means, k=4)...</span>
+                    </div>
+                    <div class="term-line">
+                        <span class="term-prompt">></span>
+                        <span class="term-text pink"> Cluster assigned: <strong>PERIODIC</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lm-model-card">
+                <div class="lm-model-header"><i class="fas fa-cube" style="margin-right:6px;"></i>模型参数</div>
+                <div class="lm-model-body">
+                    <div class="lm-model-row"><span class="label">负载类型</span><span class="val pink">PERIODIC</span></div>
+                    <div class="lm-model-row"><span class="label">均值 (μ)</span><span class="val">68.4%</span></div>
+                    <div class="lm-model-row"><span class="label">标准差 (σ)</span><span class="val">12.7%</span></div>
+                    <div class="lm-model-row"><span class="label">峰值因子</span><span class="val yellow">2.31</span></div>
+                    <div class="lm-model-row"><span class="label">周期长度</span><span class="val green">3600s</span></div>
+                    <div class="lm-model-row"><span class="label">置信区间</span><span class="val">95%</span></div>
+                </div>
+            </div>
+
+            <div class="lm-type-display">
+                <div class="lm-type-label">识别结果</div>
+                <div class="lm-type-name" id="lmTypeName">PERIODIC</div>
+                <div class="lm-type-desc" id="lmTypeDesc">周期性负载，存在明显日内波动规律，适合基于时间的预测模型</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── 负载数据生成 ──
+function generateLoadData(type, points = 60) {
+    const labels = [];
+    const data = [];
+    const now = Date.now();
+    for (let i = 0; i < points; i++) {
+        labels.push(new Date(now - (points - i) * 60000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+        let base = 65;
+        if (type === 'cpu') base = 68;
+        if (type === 'mem') base = 55;
+        if (type === 'net') base = 40;
+        if (type === 'qps') base = 280;
+        if (type === 'disk') base = 25;
+        let val = base + (Math.random() - 0.5) * 20;
+        if (type === 'cpu') {
+            val += Math.sin(i / 10 * Math.PI) * 15;
+            val += Math.sin(i / 3 * Math.PI) * 8;
+        }
+        if (type === 'mem') {
+            val += Math.sin(i / 8 * Math.PI) * 10;
+        }
+        val = Math.max(5, Math.min(98, val));
+        data.push(parseFloat(val.toFixed(1)));
+    }
+    return { labels, data };
+}
+
+const CHART_COLORS = {
+    cpu: { border: '#00f5ff', bg: 'rgba(0,245,255,0.08)', glow: '#00f5ff' },
+    mem: { border: '#ff2d78', bg: 'rgba(255,45,120,0.08)', glow: '#ff2d78' },
+    net: { border: '#bf5af2', bg: 'rgba(191,90,242,0.08)', glow: '#bf5af2' },
+    qps: { border: '#30d158', bg: 'rgba(48,209,88,0.08)', glow: '#30d158' },
+    disk: { border: '#ffd60a', bg: 'rgba(255,214,10,0.08)', glow: '#ffd60a' },
+};
+
+const CHART_LABELS = {
+    cpu: 'CPU 使用率 (%)',
+    mem: '内存使用率 (%)',
+    net: '网络 I/O (MB/s)',
+    qps: '请求 QPS',
+    disk: '磁盘 I/O (%)',
+};
+
+let lmChart;
+let currentMetric = 'cpu';
+
+function initChart(metric) {
+    const ctx = document.getElementById('lmChart').getContext('2d');
+    const col = CHART_COLORS[metric];
+    const { labels, data } = generateLoadData(metric);
+
+    if (lmChart) lmChart.destroy();
+
+    lmChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: CHART_LABELS[metric],
+                data,
+                borderColor: col.border,
+                backgroundColor: col.bg,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: col.border,
+                fill: true,
+                tension: 0.4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: col.border,
+                    bodyColor: '#e0e0e0',
+                    borderColor: col.border,
+                    borderWidth: 1,
+                    padding: 10,
+                    titleFont: { family: "'JetBrains Mono', monospace", size: 12 },
+                    bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+                    callbacks: {
+                        label: ctx => ` ${ctx.parsed.y.toFixed(1)}${metric === 'qps' ? '' : '%'}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(0,245,255,0.06)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.4)',
+                        font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        maxTicksLimit: 8,
+                        maxRotation: 0,
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(0,245,255,0.06)' },
+                    ticks: {
+                        color: 'rgba(224,224,224,0.4)',
+                        font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        callback: v => v + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function switchChart(metric, el) {
+    currentMetric = metric;
+    document.querySelectorAll('.lm-chart-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    initChart(metric);
+}
+
+function addTerminalLine(text, colorClass = 'dim', prompt = '>') {
+    const term = document.getElementById('lmTerminal');
+    const line = document.createElement('div');
+    line.className = 'term-line';
+    line.innerHTML = `<span class="term-prompt">${prompt}</span><span class="term-text ${colorClass}"> ${text}</span>`;
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+}
+
+// 实时滚动效果
+let liveInterval;
+function startLive() {
+    liveInterval = setInterval(() => {
+        if (!lmChart) return;
+        const { data } = generateLoadData(currentMetric, 60);
+        const lastVal = data[data.length - 1];
+        lmChart.data.datasets[0].data = data;
+        lmChart.update('none');
+    }, 2000);
+}
+
+// 初始化
+window.addEventListener('load', () => {
+    initChart('cpu');
+    startLive();
+});
+</script>
+</body>
+</html>

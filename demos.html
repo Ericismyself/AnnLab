@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo 演示 - AnnTeam</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>AnnTeam</h1>
+            <p>知识图谱与云计算团队 · Demo 演示</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">首页</a></li>
+                <li><a href="people.html">团队成员</a></li>
+                <li><a href="publications.html">科研成果</a></li>
+                <li><a href="activity.html">学术活动</a></li>
+                <li><a href="join.html">加入我们</a></li>
+                <li><a href="demos.html" class="active">Demo 演示</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+
+            <!-- 快速导航 -->
+            <section class="demo-quick-nav">
+                <h3><i class="fas fa-th-large"></i> 快速导航</h3>
+                <div class="quick-nav-grid">
+                    <a href="#kg-construction" class="quick-nav-btn">
+                        <i class="fas fa-project-diagram"></i> 知识图谱构建
+                    </a>
+                    <a href="#kg-completion" class="quick-nav-btn">
+                        <i class="fas fa-database"></i> 知识补全
+                    </a>
+                    <a href="#kg-fusion" class="quick-nav-btn">
+                        <i class="fas fa-sitemap"></i> 知识融合
+                    </a>
+                    <a href="#mm-kg" class="quick-nav-btn">
+                        <i class="fas fa-layer-group"></i> 多模态知识图谱
+                    </a>
+                    <a href="#load-modeling" class="quick-nav-btn">
+                        <i class="fas fa-chart-line"></i> 负载建模
+                    </a>
+                    <a href="#load-prediction" class="quick-nav-btn">
+                        <i class="fas fa-chart-bar"></i> 负载预测
+                    </a>
+                    <a href="#autoscaling" class="quick-nav-btn">
+                        <i class="fas fa-expand-arrows-alt"></i> 自动弹性扩缩
+                    </a>
+                    <a href="#anomaly-detection" class="quick-nav-btn">
+                        <i class="fas fa-exclamation-triangle"></i> 异常检测
+                    </a>
+                </div>
+            </section>
+
+            <!-- 知识图谱及其应用 -->
+            <section id="kg-construction">
+                <h2><i class="fas fa-project-diagram"></i> 知识图谱构建</h2>
+                <p class="demo-desc">
+                    本演示展示了从非结构化文本中自动抽取实体、关系，构建领域知识图谱的完整流程。
+                    以奶业金融供应链场景为例，预置伊利集团相关文本片段。
+                </p>
+                <div class="demo-frame-wrap">
+                    <iframe src="demos/kg-construction/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="kg-completion">
+                <h2><i class="fas fa-database"></i> 基于知识图谱的知识补全</h2>
+                <p class="demo-desc">
+                    展示知识图谱补全算法，对缺失的实体和关系进行预测与推理。
+                    以医疗领域（糖尿病）知识图谱为例，演示推理过程与置信度计算。
+                </p>
+                <div class="demo-frame-wrap">
+                    <iframe src="demos/kg-completion/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="kg-fusion">
+                <h2><i class="fas fa-sitemap"></i> 知识融合与推理</h2>
+                <p class="demo-desc">
+                    将"马蜂窝风格"和"大众点评风格"的内蒙古旅游知识图谱进行对齐融合演示。
+                    三步式交互：实体对齐 → 执行融合 → 完成推理。
+                </p>
+                <div class="demo-frame-wrap">
+                    <iframe src="demos/kg-fusion/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="mm-kg">
+                <h2><i class="fas fa-layer-group"></i> 多模态知识图谱</h2>
+                <p class="demo-desc">
+                    融合文本、图像、知识的多模态知识图谱展示，涵盖奶业金融、医疗、旅游三大领域。
+                    点击任意节点查看图文详情与邻居关系。
+                </p>
+                <div class="demo-frame-wrap">
+                    <iframe src="demos/mm-kg/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="load-modeling">
+                <h2><i class="fas fa-chart-line"></i> 负载建模 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <p class="demo-desc">
+                    容器云环境下的工作负载特征分析与建模，支持 CPU / 内存 / 网络 I/O / QPS / 磁盘 I/O 五类指标的实时监控与类型识别。
+                </p>
+                <div class="demo-frame-wrap demo-frame-cyber">
+                    <iframe src="demos/load-modeling/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="load-prediction">
+                <h2><i class="fas fa-chart-bar"></i> 负载预测 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <p class="demo-desc">
+                    基于 LSTM 深度学习模型的时间序列预测，灰色区域为历史数据，粉色区域为预测结果及置信区间。
+                    可切换 1h / 6h / 24h 预测范围。
+                </p>
+                <div class="demo-frame-wrap demo-frame-cyber">
+                    <iframe src="demos/load-prediction/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="autoscaling">
+                <h2><i class="fas fa-expand-arrows-alt"></i> 自动弹性扩缩 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <p class="demo-desc">
+                    基于预测的自动化容器扩缩容策略演示，点击"INJECT LOAD"按钮观察扩缩容过程。
+                    Matrix 风格背景 + 实时容器可视化。
+                </p>
+                <div class="demo-frame-wrap demo-frame-cyber">
+                    <iframe src="demos/autoscaling/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+            <section id="anomaly-detection">
+                <h2><i class="fas fa-exclamation-triangle"></i> 异常检测 <span class="demo-cyber-badge">赛博风格</span></h2>
+                <p class="demo-desc">
+                    容器云环境下的资源异常实时检测与告警，点击按钮触发各类异常事件观测。
+                    支持 CPU 飙升、内存泄漏、网络异常、抖动异常四类场景。
+                </p>
+                <div class="demo-frame-wrap demo-frame-cyber">
+                    <iframe src="demos/anomaly-detection/index.html" class="demo-frame" loading="lazy"></iframe>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="contact">
+                <h3>联系方式</h3>
+                <p><i class="fas fa-envelope"></i> ann@imu.edu.cn</p>
+                <p><i class="fas fa-map-marker-alt"></i> 计算机学院307</p>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2025 AnnTeam. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.body.classList.add('loaded');
+    </script>
+</body>
+</html>

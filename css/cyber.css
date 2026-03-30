@@ -1,0 +1,588 @@
+/* ================================================
+   AnnLab 赛博朋克风格 · 共享样式系统
+   用于 Demo 5-8（云计算方向）
+   ================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+/* ── CSS 变量 ── */
+:root {
+    /* 背景 */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #0d1117;
+    --bg-card: rgba(13, 17, 23, 0.85);
+    --bg-card-hover: rgba(20, 27, 38, 0.9);
+
+    /* 霓虹主色 */
+    --neon-cyan: #00f5ff;
+    --neon-pink: #ff2d78;
+    --neon-purple: #bf5af2;
+    --neon-green: #30d158;
+    --neon-yellow: #ffd60a;
+    --neon-orange: #ff9500;
+
+    /* Glow 效果 */
+    --glow-cyan: 0 0 8px rgba(0, 245, 255, 0.6), 0 0 20px rgba(0, 245, 255, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+    --glow-pink: 0 0 8px rgba(255, 45, 120, 0.6), 0 0 20px rgba(255, 45, 120, 0.3);
+    --glow-purple: 0 0 8px rgba(191, 90, 242, 0.6), 0 0 20px rgba(191, 90, 242, 0.3);
+    --glow-green: 0 0 8px rgba(48, 209, 88, 0.6), 0 0 20px rgba(48, 209, 88, 0.3);
+    --glow-yellow: 0 0 8px rgba(255, 214, 10, 0.6), 0 0 20px rgba(255, 214, 10, 0.3);
+
+    /* 文字 */
+    --text-primary: #e0e0e0;
+    --text-secondary: #7a7a8c;
+    --text-dim: #3a3a4a;
+
+    /* 边框 */
+    --border-dim: rgba(0, 245, 255, 0.1);
+    --border-active: rgba(0, 245, 255, 0.4);
+
+    /* 字体 */
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* ── 全局重置（赛博版） ── */
+.cyber-body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* 扫描线叠加层 */
+.cyber-body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9998;
+}
+
+/* 霓虹网格背景 */
+.cyber-grid-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+}
+
+/* ── 布局 ── */
+.cyber-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.cyber-main {
+    padding: 40px 0;
+}
+
+/* ── 卡片 ── */
+.cyber-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 4px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.cyber-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.cyber-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.08);
+}
+
+.cyber-card:hover::before {
+    opacity: 1;
+}
+
+/* 斜角卡片（右上角切角） */
+.cyber-card-cut {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
+
+/* ── 霓虹标题 ── */
+.cyber-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cyber-title i {
+    color: var(--neon-cyan);
+}
+
+.cyber-title .accent {
+    color: var(--neon-pink);
+    text-shadow: var(--glow-pink);
+}
+
+.cyber-title .tag {
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    text-shadow: none;
+}
+
+/* ── 霓虹按钮 ── */
+.cyber-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.cyber-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.15), transparent);
+    transition: left 0.4s ease;
+}
+
+.cyber-btn:hover {
+    background: rgba(0, 245, 255, 0.1);
+    box-shadow: var(--glow-cyan);
+    color: var(--neon-cyan);
+    transform: translateY(-1px);
+}
+
+.cyber-btn:hover::before {
+    left: 100%;
+}
+
+.cyber-btn:active {
+    transform: translateY(1px);
+}
+
+.cyber-btn.pink {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+}
+
+.cyber-btn.pink::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 45, 120, 0.15), transparent);
+}
+
+.cyber-btn.pink:hover {
+    background: rgba(255, 45, 120, 0.1);
+    box-shadow: var(--glow-pink);
+}
+
+.cyber-btn.green {
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+}
+
+.cyber-btn.green::before {
+    background: linear-gradient(90deg, transparent, rgba(48, 209, 88, 0.15), transparent);
+}
+
+.cyber-btn.green:hover {
+    background: rgba(48, 209, 88, 0.1);
+    box-shadow: var(--glow-green);
+}
+
+/* ── 终端输入框 ── */
+.cyber-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-dim);
+    border-radius: 2px;
+    color: var(--neon-cyan);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.3s;
+    caret-color: var(--neon-cyan);
+}
+
+.cyber-input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 0 1px rgba(0, 245, 255, 0.2), inset 0 0 10px rgba(0, 245, 255, 0.05);
+}
+
+.cyber-input::placeholder {
+    color: var(--text-dim);
+}
+
+/* ── 标签 / Badge ── */
+.cyber-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.cyber-badge.cyan {
+    background: rgba(0, 245, 255, 0.12);
+    color: var(--neon-cyan);
+    border: 1px solid rgba(0, 245, 255, 0.3);
+}
+
+.cyber-badge.pink {
+    background: rgba(255, 45, 120, 0.12);
+    color: var(--neon-pink);
+    border: 1px solid rgba(255, 45, 120, 0.3);
+}
+
+.cyber-badge.green {
+    background: rgba(48, 209, 88, 0.12);
+    color: var(--neon-green);
+    border: 1px solid rgba(48, 209, 88, 0.3);
+}
+
+.cyber-badge.yellow {
+    background: rgba(255, 214, 10, 0.12);
+    color: var(--neon-yellow);
+    border: 1px solid rgba(255, 214, 10, 0.3);
+}
+
+.cyber-badge.purple {
+    background: rgba(191, 90, 242, 0.12);
+    color: var(--neon-purple);
+    border: 1px solid rgba(191, 90, 242, 0.3);
+}
+
+/* ── 终端面板 ── */
+.cyber-terminal {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--border-dim);
+    border-radius: 4px;
+    overflow: hidden;
+    font-size: 0.8rem;
+}
+
+.cyber-terminal-header {
+    padding: 8px 14px;
+    background: rgba(0, 245, 255, 0.05);
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cyber-terminal-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.cyber-terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.cyber-terminal-dot.red { background: #ff5f57; }
+.cyber-terminal-dot.yellow { background: #febc2e; }
+.cyber-terminal-dot.green { background: #28c840; }
+
+.cyber-terminal-title {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-left: 6px;
+}
+
+.cyber-terminal-body {
+    padding: 14px;
+    min-height: 120px;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.8;
+}
+
+.cyber-terminal-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cyber-terminal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.cyber-terminal-body::-webkit-scrollbar-thumb {
+    background: var(--neon-cyan);
+    border-radius: 2px;
+}
+
+/* 终端行 */
+.term-line {
+    display: flex;
+    gap: 8px;
+    animation: termFadeIn 0.3s ease;
+}
+
+.term-prompt {
+    color: var(--neon-green);
+    flex-shrink: 0;
+}
+
+.term-text {
+    color: var(--text-primary);
+}
+
+.term-text.dim {
+    color: var(--text-secondary);
+}
+
+.term-text.cyan {
+    color: var(--neon-cyan);
+}
+
+.term-text.pink {
+    color: var(--neon-pink);
+}
+
+.term-text.green {
+    color: var(--neon-green);
+}
+
+.term-text.yellow {
+    color: var(--neon-yellow);
+}
+
+.term-text.purple {
+    color: var(--neon-purple);
+}
+
+/* ── 进度条 ── */
+.cyber-progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.cyber-progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    position: relative;
+    transition: width 0.6s ease;
+}
+
+.cyber-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    animation: progressShine 1.5s infinite;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.cyber-progress-bar.cyan { background: linear-gradient(90deg, var(--neon-cyan), rgba(0,245,255,0.5)); }
+.cyber-progress-bar.pink { background: linear-gradient(90deg, var(--neon-pink), rgba(255,45,120,0.5)); }
+.cyber-progress-bar.green { background: linear-gradient(90deg, var(--neon-green), rgba(48,209,88,0.5)); }
+.cyber-progress-bar.purple { background: linear-gradient(90deg, var(--neon-purple), rgba(191,90,242,0.5)); }
+
+/* ── 霓虹数字 ── */
+.cyber-stat {
+    text-align: center;
+}
+
+.cyber-stat-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    line-height: 1;
+    display: block;
+}
+
+.cyber-stat-value.pink { color: var(--neon-pink); text-shadow: var(--glow-pink); }
+.cyber-stat-value.green { color: var(--neon-green); text-shadow: var(--glow-green); }
+.cyber-stat-value.yellow { color: var(--neon-yellow); text-shadow: var(--glow-yellow); }
+
+.cyber-stat-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    display: block;
+}
+
+/* ── 分隔线 ── */
+.cyber-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-active), transparent);
+    margin: 20px 0;
+}
+
+/* ── 状态指示灯 ── */
+.cyber-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+    animation: pulse 2s infinite;
+}
+
+.cyber-dot.pink { background: var(--neon-pink); box-shadow: var(--glow-pink); }
+.cyber-dot.green { background: var(--neon-green); box-shadow: var(--glow-green); animation: none; }
+.cyber-dot.yellow { background: var(--neon-yellow); box-shadow: var(--glow-yellow); }
+.cyber-dot.red { background: var(--neon-pink); box-shadow: var(--glow-pink); animation: blink 0.5s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* ── 扫描动画 ── */
+@keyframes scan {
+    0% { top: -10%; }
+    100% { top: 110%; }
+}
+
+.cyber-scan {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, transparent, rgba(0, 245, 255, 0.08), transparent);
+    animation: scan 3s linear infinite;
+    pointer-events: none;
+}
+
+/* ── 打字机效果 ── */
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes termFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 翻牌数字 ── */
+.cyber-flip-num {
+    display: inline-block;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-active);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    min-width: 32px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(0, 245, 255, 0.1);
+}
+
+.cyber-flip-num.pink { color: var(--neon-pink); text-shadow: var(--glow-pink); border-color: rgba(255,45,120,0.4); }
+.cyber-flip-num.green { color: var(--neon-green); text-shadow: var(--glow-green); border-color: rgba(48,209,88,0.4); }
+
+/* ── 告警闪烁 ── */
+@keyframes alarmFlash {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(255, 45, 120, 0.06); }
+}
+
+.cyber-alarm {
+    animation: alarmFlash 0.8s infinite;
+}
+
+/* ── Matrix 数据流背景 ── */
+.matrix-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    opacity: 0.04;
+    pointer-events: none;
+}
+
+.matrix-bg canvas {
+    display: block;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 768px) {
+    .cyber-container { padding: 0 16px; }
+    .cyber-title { font-size: 1.2rem; }
+    .cyber-stat-value { font-size: 1.6rem; }
+}

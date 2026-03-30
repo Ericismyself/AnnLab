@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动弹性扩缩 — 云计算</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        .cyber-body { min-height: 100vh; }
+        .as-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr 320px;
+            gap: 16px;
+            align-items: start;
+        }
+        .as-left-panel { display: flex; flex-direction: column; gap: 16px; }
+        .as-control-card {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 16px;
+        }
+        .as-control-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .as-metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.8rem;
+        }
+        .as-metric-row:last-child { border-bottom: none; }
+        .as-metric-row .label { color: var(--text-secondary); }
+        .as-metric-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+        .as-metric-val.cyan { color: var(--neon-cyan); }
+        .as-metric-val.pink { color: var(--neon-pink); }
+        .as-metric-val.green { color: var(--neon-green); }
+        .as-metric-val.yellow { color: var(--neon-yellow); }
+        .as-slider-wrap { margin-bottom: 14px; }
+        .as-slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .as-slider-header .val { color: var(--neon-cyan); font-family: var(--font-mono); font-weight: 600; }
+        .as-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(0,245,255,0.15);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        .as-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            box-shadow: var(--glow-cyan);
+            cursor: pointer;
+        }
+        .as-inject-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,45,120,0.1);
+            border: 1px solid var(--neon-pink);
+            border-radius: 4px;
+            color: var(--neon-pink);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .as-inject-btn:hover {
+            background: rgba(255,45,120,0.2);
+            box-shadow: var(--glow-pink);
+            transform: translateY(-1px);
+        }
+        .as-inject-btn:active {
+            transform: translateY(1px);
+        }
+        .as-container-viz {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            overflow: hidden;
+            min-height: 400px;
+            position: relative;
+            padding: 20px;
+        }
+        .as-matrix-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            opacity: 0.03;
+            pointer-events: none;
+        }
+        #matrixCanvas { display: block; }
+        .as-container-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            min-height: 300px;
+        }
+        .as-container-hex {
+            width: 64px;
+            height: 64px;
+            background: rgba(0,245,255,0.1);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--neon-cyan);
+            box-shadow: 0 0 8px rgba(0,245,255,0.2);
+            animation: containerAppear 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .as-container-hex::after {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: 0; right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(0,245,255,0.15), transparent);
+            animation: containerScan 2s linear infinite;
+        }
+        .as-container-hex .cpu-bar {
+            width: 36px;
+            height: 3px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .as-container-hex .cpu-fill {
+            height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .as-container-hex.scaling-out {
+            animation: containerRemove 0.5s ease forwards;
+        }
+        .as-container-hex.scaling-in {
+            animation: containerAppear 0.4s ease;
+        }
+        @keyframes containerAppear {
+            from { opacity: 0; transform: scale(0.3) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes containerRemove {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); box-shadow: 0 0 20px rgba(0,245,255,0.4); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+        @keyframes containerScan {
+            0% { top: -100%; }
+            100% { top: 100%; }
+        }
+        .as-viz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            position: relative;
+            z-index: 2;
+        }
+        .as-container-count {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .as-container-count .num {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            text-shadow: var(--glow-cyan);
+            font-family: var(--font-mono);
+            line-height: 1;
+        }
+        .as-container-count .unit {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+        .as-right-panel { display: flex; flex-direction: column; gap: 16px; }
+        .as-chart-wrap {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 16px;
+        }
+        .as-event-log {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .as-event-log::-webkit-scrollbar { width: 4px; }
+        .as-event-log::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 2px; }
+        .as-event-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.75rem;
+            animation: termFadeIn 0.3s ease;
+        }
+        .as-event-item:last-child { border-bottom: none; }
+        .as-event-time { color: var(--text-secondary); font-family: var(--font-mono); min-width: 50px; flex-shrink: 0; }
+        .as-event-type {
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+        .as-event-type.scale-up { background: rgba(48,209,88,0.15); color: var(--neon-green); }
+        .as-event-type.scale-down { background: rgba(0,245,255,0.15); color: var(--neon-cyan); }
+        .as-event-type.load { background: rgba(255,45,120,0.15); color: var(--neon-pink); }
+        .as-event-desc { color: var(--text-secondary); flex: 1; }
+        @media (max-width: 1100px) {
+            .as-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
+<div class="cyber-container cyber-main">
+
+    <div class="cyber-title" style="margin-bottom:8px;">
+        <i class="fas fa-expand-arrows-alt"></i>
+        自动弹性扩缩
+        <span class="tag" style="color:var(--neon-green);border-color:var(--neon-green);">CLOUD COMPUTING</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:24px;line-height:1.6;">
+        基于预测的自动化容器扩缩容策略演示，点击"模拟流量激增"按钮观察扩缩容过程
+    </p>
+
+    <div class="as-layout">
+        <!-- 左侧：控制面板 -->
+        <div class="as-left-panel">
+            <div class="as-control-card">
+                <div style="font-size:0.72rem;color:var(--neon-cyan);margin-bottom:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                    <i class="fas fa-tachometer-alt" style="margin-right:6px;"></i> 实时指标
+                </div>
+                <div class="as-metric-row">
+                    <span class="label">CPU 使用率</span>
+                    <span class="as-metric-val cyan" id="asCPU">42%</span>
+                </div>
+                <div class="as-metric-row">
+                    <span class="label">内存使用率</span>
+                    <span class="as-metric-val pink" id="asMem">38%</span>
+                </div>
+                <div class="as-metric-row">
+                    <span class="label">当前容器数</span>
+                    <span class="as-metric-val green" id="asCount">3</span>
+                </div>
+                <div class="as-metric-row">
+                    <span class="label">QPS</span>
+                    <span class="as-metric-val yellow" id="asQPS">156</span>
+                </div>
+            </div>
+
+            <div class="as-control-card">
+                <div style="font-size:0.72rem;color:var(--neon-cyan);margin-bottom:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                    <i class="fas fa-sliders-h" style="margin-right:6px;"></i> 扩缩规则
+                </div>
+                <div class="as-slider-wrap">
+                    <div class="as-slider-header">
+                        <span>扩容阈值</span>
+                        <span class="val" id="scaleUpVal">70%</span>
+                    </div>
+                    <input type="range" class="as-slider" id="scaleUpSlider" min="50" max="90" value="70">
+                </div>
+                <div class="as-slider-wrap">
+                    <div class="as-slider-header">
+                        <span>缩容阈值</span>
+                        <span class="val" id="scaleDownVal">30%</span>
+                    </div>
+                    <input type="range" class="as-slider" id="scaleDownSlider" min="10" max="50" value="30">
+                </div>
+            </div>
+
+            <button class="as-inject-btn" id="asInjectBtn" onclick="injectLoad()">
+                <i class="fas fa-bolt" style="margin-right:6px;"></i>
+                INJECT LOAD
+            </button>
+        </div>
+
+        <!-- 中央：容器可视化 -->
+        <div class="as-container-viz">
+            <div class="as-matrix-bg">
+                <canvas id="matrixCanvas"></canvas>
+            </div>
+            <div class="as-container-grid" id="asContainerGrid">
+                <!-- 容器方块动态生成 -->
+            </div>
+            <div class="as-viz-footer">
+                <div class="as-container-count">
+                    <span class="num" id="asDisplayCount">3</span>
+                    <span class="unit">容器</span>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-secondary);font-family:var(--font-mono);">
+                    状态 <span style="color:var(--neon-green);" id="asStatus">STABLE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：图表+日志 -->
+        <div class="as-right-panel">
+            <div class="as-chart-wrap">
+                <div style="font-size:0.72rem;color:var(--neon-cyan);margin-bottom:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                    <i class="fas fa-chart-line" style="margin-right:6px;"></i> 实时监控
+                </div>
+                <div style="height:140px;position:relative;">
+                    <canvas id="asMiniChart"></canvas>
+                </div>
+            </div>
+
+            <div class="cyber-terminal">
+                <div class="cyber-terminal-header">
+                    <div class="cyber-terminal-dots">
+                        <div class="cyber-terminal-dot red"></div>
+                        <div class="cyber-terminal-dot yellow"></div>
+                        <div class="cyber-terminal-dot green"></div>
+                    </div>
+                    <span class="cyber-terminal-title">scale_events.log</span>
+                </div>
+                <div class="as-event-log" id="asEventLog">
+                    <div class="as-event-item">
+                        <span class="as-event-time">14:32:01</span>
+                        <span class="as-event-type scale-up">SCALE</span>
+                        <span class="as-event-desc">容器 2 → 3 (CPU: 35%)</span>
+                    </div>
+                    <div class="as-event-item">
+                        <span class="as-event-time">14:28:45</span>
+                        <span class="as-event-type scale-down">SCALE</span>
+                        <span class="as-event-desc">容器 4 → 3 (QPS: 89)</span>
+                    </div>
+                    <div class="as-event-item">
+                        <span class="as-event-time">14:20:12</span>
+                        <span class="as-event-type load">LOAD</span>
+                        <span class="as-event-desc">流量激增事件 CPU: 78%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Matrix 背景 ──
+function initMatrix() {
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    const resize = () => {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    };
+    resize();
+    const cols = Math.floor(canvas.width / 14);
+    const drops = Array(cols).fill(1);
+    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホ';
+    function draw() {
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00f5ff';
+        ctx.font = '12px JetBrains Mono, monospace';
+        for (let i = 0; i < drops.length; i++) {
+            const char = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(char, i * 14, drops[i] * 14);
+            if (drops[i] * 14 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 50);
+    window.addEventListener('resize', resize);
+}
+
+// ── 容器状态 ──
+let containerCount = 3;
+let currentCPU = 42;
+let currentQPS = 156;
+const scaleUpThreshold = 70;
+const scaleDownThreshold = 30;
+const MAX_CONTAINERS = 8;
+const MIN_CONTAINERS = 1;
+
+function renderContainers(newCount, animType) {
+    const grid = document.getElementById('asContainerGrid');
+    grid.innerHTML = '';
+    for (let i = 0; i < newCount; i++) {
+        const hex = document.createElement('div');
+        hex.className = 'as-container-hex';
+        const cpu = Math.floor(Math.random() * 40 + 30);
+        hex.innerHTML = `
+            <span>C${i + 1}</span>
+            <div class="cpu-bar"><div class="cpu-fill" style="width:${cpu}%"></div></div>
+        `;
+        if (animType === 'in' && i >= containerCount) {
+            // 新增容器的动画在CSS中
+        }
+        grid.appendChild(hex);
+    }
+    document.getElementById('asDisplayCount').textContent = newCount;
+    document.getElementById('asCount').textContent = newCount;
+}
+
+function addEventLog(type, desc) {
+    const log = document.getElementById('asEventLog');
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const typeClass = type === 'SCALE UP' ? 'scale-up' : type === 'SCALE DOWN' ? 'scale-down' : 'load';
+    const item = document.createElement('div');
+    item.className = 'as-event-item';
+    item.innerHTML = `
+        <span class="as-event-time">${time}</span>
+        <span class="as-event-type ${typeClass}">${type}</span>
+        <span class="as-event-desc">${desc}</span>
+    `;
+    log.insertBefore(item, log.firstChild);
+    if (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+function scaleContainers(up) {
+    if (up && containerCount >= MAX_CONTAINERS) return;
+    if (!up && containerCount <= MIN_CONTAINERS) return;
+
+    const oldCount = containerCount;
+    containerCount += up ? 1 : -1;
+
+    addEventLog(up ? 'SCALE UP' : 'SCALE DOWN',
+        `容器 ${oldCount} → ${containerCount} (CPU: ${currentCPU}%)`
+    );
+
+    const status = document.getElementById('asStatus');
+    status.textContent = up ? 'SCALING UP' : 'SCALING DOWN';
+    status.style.color = up ? 'var(--neon-green)' : 'var(--neon-cyan)';
+
+    renderContainers(containerCount, 'in');
+
+    setTimeout(() => {
+        status.textContent = 'STABLE';
+        status.style.color = 'var(--neon-green)';
+    }, 2000);
+}
+
+function injectLoad() {
+    const btn = document.getElementById('asInjectBtn');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
+    // 模拟流量激增
+    currentCPU = Math.floor(Math.random() * 30 + 65);
+    currentQPS = Math.floor(Math.random() * 400 + 400);
+
+    document.getElementById('asCPU').textContent = currentCPU + '%';
+    document.getElementById('asQPS').textContent = currentQPS;
+
+    addEventLog('LOAD', `流量激增 CPU: ${currentCPU}% QPS: ${currentQPS}`);
+
+    const status = document.getElementById('asStatus');
+    status.textContent = 'HIGH LOAD';
+    status.style.color = 'var(--neon-pink)';
+
+    if (currentCPU >= scaleUpThreshold && containerCount < MAX_CONTAINERS) {
+        setTimeout(() => scaleContainers(true), 1000);
+    }
+
+    // 恢复正常
+    setTimeout(() => {
+        currentCPU = Math.floor(Math.random() * 20 + 25);
+        currentQPS = Math.floor(Math.random() * 100 + 100);
+        document.getElementById('asCPU').textContent = currentCPU + '%';
+        document.getElementById('asQPS').textContent = currentQPS;
+
+        if (currentCPU <= scaleDownThreshold && containerCount > MIN_CONTAINERS) {
+            scaleContainers(false);
+        } else {
+            status.textContent = 'STABLE';
+            status.style.color = 'var(--neon-green)';
+        }
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    }, 4000);
+}
+
+// ── Mini Chart ──
+let asMiniChart;
+function initMiniChart() {
+    const ctx = document.getElementById('asMiniChart').getContext('2d');
+    const labels = Array(20).fill('').map((_, i) => {
+        const t = new Date(Date.now() - (19 - i) * 5000);
+        return t.toLocaleTimeString('zh-CN', { minute: '2-digit', second: '2-digit' });
+    });
+    const cpuData = Array(20).fill(0).map(() => Math.floor(Math.random() * 30 + 35));
+
+    asMiniChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'CPU %',
+                data: cpuData,
+                borderColor: '#00f5ff',
+                backgroundColor: 'rgba(0,245,255,0.08)',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: true,
+                tension: 0.4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+                x: { display: false },
+                y: {
+                    min: 0, max: 100,
+                    grid: { color: 'rgba(0,245,255,0.06)' },
+                    ticks: { display: false }
+                }
+            }
+        }
+    });
+}
+
+let miniInterval;
+function startMiniLive() {
+    miniInterval = setInterval(() => {
+        if (!asMiniChart) return;
+        const newVal = Math.max(10, Math.min(95, currentCPU + (Math.random() - 0.5) * 10));
+        asMiniChart.data.datasets[0].data.shift();
+        asMiniChart.data.datasets[0].data.push(parseFloat(newVal.toFixed(1)));
+        asMiniChart.update('none');
+    }, 1000);
+}
+
+// Slider 联动
+document.getElementById('scaleUpSlider')?.addEventListener('input', e => {
+    document.getElementById('scaleUpVal').textContent = e.target.value + '%';
+});
+document.getElementById('scaleDownSlider')?.addEventListener('input', e => {
+    document.getElementById('scaleDownVal').textContent = e.target.value + '%';
+});
+
+window.addEventListener('load', () => {
+    initMatrix();
+    renderContainers(containerCount);
+    initMiniChart();
+    startMiniLive();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识补全 — 医疗领域</title>
+    <link rel="stylesheet" href="../../css/kg.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .med-demo-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+        .med-graph-area {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--kg-border);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            min-height: 500px;
+        }
+        #med-graph { width: 100%; height: 500px; }
+        .med-graph-hint {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,137,123,0.15);
+            border: 1px solid rgba(0,137,123,0.4);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            color: var(--kg-teal-light);
+        }
+        .med-panel-area { display: flex; flex-direction: column; gap: 16px; }
+        .med-infer-log {
+            max-height: 260px; overflow-y: auto;
+        }
+        .med-infer-log::-webkit-scrollbar { width: 4px; }
+        .med-infer-log::-webkit-scrollbar-thumb { background: var(--kg-teal); border-radius: 2px; }
+        .med-infer-step {
+            display: flex; gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,137,123,0.1);
+            font-size: 0.82rem;
+            animation: kgFadeIn 0.4s ease;
+        }
+        .med-infer-step:last-child { border-bottom: none; }
+        .med-step-num {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: rgba(0,137,123,0.2);
+            border: 1px solid var(--kg-teal);
+            color: var(--kg-teal-light);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+        }
+        .med-step-content { flex: 1; }
+        .med-step-title { color: var(--kg-text); font-weight: 500; margin-bottom: 3px; }
+        .med-step-detail { color: var(--kg-text-dim); font-size: 0.75rem; line-height: 1.5; }
+        .med-confidence-card {
+            background: rgba(0,137,123,0.08);
+            border: 1px solid rgba(0,137,123,0.25);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .med-confidence-title { font-size: 0.8rem; color: var(--kg-teal-light); margin-bottom: 12px; font-weight: 600; }
+        .med-predict-row {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px;
+        }
+        .med-predict-row:last-child { margin-bottom: 0; }
+        .med-predict-label { font-size: 0.78rem; color: var(--kg-text); min-width: 90px; }
+        .med-predict-bar-wrap { flex: 1; }
+        .med-predict-val { font-size: 0.75rem; color: var(--kg-teal-light); font-weight: 600; margin-bottom: 3px; }
+        .med-predict-bar { height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; }
+        .med-predict-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--kg-teal), var(--kg-teal-light)); transition: width 1s ease; }
+        .med-action-area {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .med-legend-area {
+            background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px 14px;
+        }
+        .med-legend-area .kg-legend-item { font-size: 0.75rem; margin-bottom: 5px; }
+        .med-legend-area .kg-legend-item:last-child { margin-bottom: 0; }
+        @media (max-width: 900px) {
+            .med-demo-layout { grid-template-columns: 1fr; }
+            #med-graph { height: 380px; }
+            .med-graph-area { min-height: 380px; }
+        }
+    </style>
+</head>
+<body>
+<div class="kg-grid-bg"></div>
+<div class="kg-container kg-main">
+
+    <div class="kg-page-header">
+        <h1 class="kg-page-title"><i class="fas fa-database"></i>基于知识图谱的知识补全</h1>
+        <p class="kg-page-desc">医疗知识图谱中缺失关系的智能推理与预测，以糖尿病诊疗知识图谱为例</p>
+        <span class="kg-page-tag medical"><i class="fas fa-heartbeat"></i> 医疗领域</span>
+    </div>
+
+    <div class="med-demo-layout">
+        <div class="med-graph-area">
+            <div id="med-graph"></div>
+            <div class="med-graph-hint">
+                <i class="fas fa-lightbulb" style="margin-right:4px;"></i>
+                点击虚线边触发知识补全推理
+            </div>
+            <div class="kg-graph-legend" style="bottom:10px;left:10px;">
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-teal)"></span> 疾病</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#f39c12"></span> 症状</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#e53935"></span> 药品</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#7986cb"></span> 检查</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-blue)"></span> 患者</div>
+                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-red);opacity:0.5;border:2px dashed var(--kg-red)"></span> 待预测关系</div>
+            </div>
+        </div>
+
+        <div class="med-panel-area">
+            <div class="kg-card med-action-area">
+                <div class="kg-section-title"><i class="fas fa-brain"></i> 推理引擎</div>
+                <div class="kg-btn kg-btn-primary" onclick="runInference()" style="width:100%;justify-content:center;">
+                    <i class="fas fa-play"></i> 启动知识补全
+                </div>
+                <div class="kg-btn kg-btn-ghost" onclick="resetMedGraph()" style="width:100%;justify-content:center;">
+                    <i class="fas fa-redo"></i> 重置图谱
+                </div>
+                <div class="kg-btn kg-btn-ghost" onclick="runInference()" style="width:100%;justify-content:center;margin-top:4px;">
+                    <i class="fas fa-sync-alt"></i> 重新推理
+                </div>
+            </div>
+
+            <div class="kg-card">
+                <div class="kg-section-title"><i class="fas fa-project-diagram"></i> 推理过程</div>
+                <div class="med-infer-log" id="medInferLog">
+                    <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+                        <i class="fas fa-brain" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+                        点击"启动知识补全"查看推理路径
+                    </div>
+                </div>
+            </div>
+
+            <div class="med-confidence-card">
+                <div class="med-confidence-title"><i class="fas fa-chart-bar" style="margin-right:6px;"></i> 预测置信度</div>
+                <div class="med-predict-row">
+                    <span class="med-predict-label">二甲双胍→不良反应</span>
+                    <div class="med-predict-bar-wrap">
+                        <div class="med-predict-val" id="conf1">—</div>
+                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf1bar" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <div class="med-predict-row">
+                    <span class="med-predict-label">高血压→关联疾病</span>
+                    <div class="med-predict-bar-wrap">
+                        <div class="med-predict-val" id="conf2">—</div>
+                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf2bar" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <div class="med-predict-row">
+                    <span class="med-predict-label">血糖检测→诊断依据</span>
+                    <div class="med-predict-bar-wrap">
+                        <div class="med-predict-val" id="conf3">—</div>
+                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf3bar" style="width:0%"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const MED_NODES = [
+    { id: 'd1', name: '2型糖尿病', type: 'disease', desc: '以胰岛素抵抗为特征的代谢性疾病' },
+    { id: 'd2', name: '高血压', type: 'disease', desc: '以体循环动脉压升高为特征的临床综合征' },
+    { id: 'd3', name: '冠心病', type: 'disease', desc: '冠状动脉粥样硬化性心脏病' },
+    { id: 's1', name: '多饮', type: 'symptom', desc: '患者大量饮水仍感口渴' },
+    { id: 's2', name: '多尿', type: 'symptom', desc: '尿量明显增多，每日>2500ml' },
+    { id: 's3', name: '体重下降', type: 'symptom', desc: '非刻意性体重减轻' },
+    { id: 's4', name: '头晕', type: 'symptom', desc: '头部不适感，常与血压相关' },
+    { id: 's5', name: '胸闷', type: 'symptom', desc: '胸部紧缩感，心脏缺血表现' },
+    { id: 'm1', name: '二甲双胍', type: 'drug', desc: '一线降糖药，抑制肝糖输出' },
+    { id: 'm2', name: '阿司匹林', type: 'drug', desc: '抗血小板聚集药物' },
+    { id: 'c1', name: '血糖检测', type: 'check', desc: '空腹血糖及餐后2h血糖' },
+    { id: 'c2', name: '心电图', type: 'check', desc: '心脏电活动检查' },
+];
+
+const MED_LINKS = [
+    { source: 'd1', target: 's1', type: '典型症状' },
+    { source: 'd1', target: 's2', type: '典型症状' },
+    { source: 'd1', target: 's3', type: '临床表现' },
+    { source: 'd1', target: 'c1', type: '诊断依据' },
+    { source: 'd1', target: 'm1', type: '常用药' },
+    { source: 'd2', target: 's4', type: '常见症状' },
+    { source: 'd2', target: 'd3', type: '关联疾病' },
+    { source: 'd3', target: 's5', type: '典型症状' },
+    { source: 'd3', target: 'm2', type: '常用药' },
+    { source: 'd3', target: 'c2', type: '检查项目' },
+    // 待补全的虚线边
+    { source: 'm1', target: 's4', type: '?不良反应', missing: true, conf: 0.84 },
+    { source: 'd2', target: 'm1', type: '?合并用药', missing: true, conf: 0.76 },
+    { source: 'd1', target: 's5', type: '?需验证', missing: true, conf: 0.61 },
+];
+
+const MED_TYPE_COLORS = {
+    disease: { fill: '#00897b', stroke: '#4db6ac' },
+    symptom: { fill: '#f39c12', stroke: '#f1c40f' },
+    drug:    { fill: '#e53935', stroke: '#ff6659' },
+    check:   { fill: '#7986cb', stroke: '#9fa8da' },
+    patient: { fill: '#3a7bd5', stroke: '#5b9cf6' },
+};
+
+let medSim, medSvg, medG;
+
+function initMedGraph() {
+    const container = document.getElementById('med-graph');
+    const W = container.clientWidth, H = container.clientHeight;
+    d3.select('#med-graph').selectAll('*').remove();
+    medSvg = d3.select('#med-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0, 0, W, H]);
+    const zoom = d3.zoom().scaleExtent([0.4, 3]).on('zoom', e => medG.attr('transform', e.transform));
+    medSvg.call(zoom);
+
+    medSvg.append('defs').append('marker')
+        .attr('id', 'med-arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 26).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', 'rgba(0,137,123,0.5)');
+
+    // 虚线箭头
+    medSvg.select('defs').append('marker')
+        .attr('id', 'med-missing')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 26).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#e53935');
+
+    medG = medSvg.append('g');
+    renderMedGraph();
+}
+
+function renderMedGraph(highlightPath) {
+    medG.selectAll('*').remove();
+
+    // 边
+    const link = medG.append('g').selectAll('line')
+        .data(MED_LINKS)
+        .enter().append('line')
+        .attr('x1', d => {
+            const s = MED_NODES.find(n => n.id === d.source);
+            return s ? s.x : 0;
+        })
+        .attr('y1', d => {
+            const s = MED_NODES.find(n => n.id === d.source);
+            return s ? s.y : 0;
+        })
+        .attr('x2', d => {
+            const t = MED_NODES.find(n => n.id === d.target);
+            return t ? t.x : 0;
+        })
+        .attr('y2', d => {
+            const t = MED_NODES.find(n => n.id === d.target);
+            return t ? t.y : 0;
+        })
+        .attr('stroke', d => d.missing ? '#e53935' : 'rgba(0,137,123,0.45)')
+        .attr('stroke-width', d => d.missing ? 2 : 1.5)
+        .attr('stroke-dasharray', d => d.missing ? '5,4' : 'none')
+        .attr('marker-end', d => d.missing ? 'url(#med-missing)' : 'url(#med-arrow)')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80).duration(500)
+        .attr('opacity', 1);
+
+    // 边标签
+    const linkLabel = medG.append('g').selectAll('text')
+        .data(MED_LINKS)
+        .enter().append('text')
+        .text(d => d.type)
+        .attr('font-size', 10)
+        .attr('fill', d => d.missing ? '#e53935' : 'rgba(0,137,123,0.7)')
+        .attr('text-anchor', 'middle')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 80 + 300).duration(400)
+        .attr('opacity', 1);
+
+    // 节点
+    const node = medG.append('g').selectAll('g')
+        .data(MED_NODES)
+        .enter().append('g')
+        .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`)
+        .attr('cursor', 'pointer');
+
+    node.append('rect')
+        .attr('width', d => Math.max(d.name.length * 14 + 28, 80))
+        .attr('height', 30)
+        .attr('x', d => -(Math.max(d.name.length * 14 + 28, 80)) / 2)
+        .attr('y', -15)
+        .attr('rx', 5)
+        .attr('fill', d => MED_TYPE_COLORS[d.type].fill)
+        .attr('stroke', d => MED_TYPE_COLORS[d.type].stroke)
+        .attr('stroke-width', 1.5)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100).duration(500)
+        .attr('opacity', 1);
+
+    node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', 12)
+        .attr('fill', '#fff')
+        .attr('font-weight', '500')
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100 + 200).duration(400)
+        .attr('opacity', 1);
+
+    // 节点标注
+    const typeLabel = { disease: '疾病', symptom: '症状', drug: '药品', check: '检查', patient: '患者' };
+    node.append('text')
+        .text(d => typeLabel[d.type])
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 8)
+        .attr('fill', 'rgba(255,255,255,0.7)')
+        .attr('y', 22)
+        .attr('opacity', 0)
+        .transition().delay((d,i) => i * 100 + 400).duration(400)
+        .attr('opacity', 0.7);
+
+    medSim = d3.forceSimulation(MED_NODES)
+        .force('link', d3.forceLink(MED_LINKS).id(d => d.id).distance(110))
+        .force('charge', d3.forceManyBody().strength(-380))
+        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('collision', d3.forceCollide(35))
+        .on('tick', () => {
+            link
+                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            linkLabel
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2 - 8);
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+}
+
+function runInference() {
+    const log = document.getElementById('medInferLog');
+    log.innerHTML = '';
+    initMedGraph();
+
+    const STEPS = [
+        { title: '节点激活', detail: '从已知节点「二甲双胍」出发，激活邻居节点...', delay: 400 },
+        { title: '关系传递', detail: '检测到「二甲双胍 → 常用药 → 2型糖尿病」，传递关系类型...', delay: 900 },
+        { title: '路径搜索', detail: '搜索从「二甲双胍」到「头晕」的所有可能路径...', delay: 1400 },
+        { title: '置信度计算', detail: '基于路径频率与医学知识库，计算预测置信度...', delay: 1900 },
+        { title: '结果验证', detail: '关联医学指南：二甲双胍常见不良反应包含头晕...', delay: 2400 },
+        { title: '补全完成', detail: '预测关系已添加至知识图谱 (置信度 84%)', delay: 2900 },
+    ];
+
+    STEPS.forEach((step, i) => {
+        setTimeout(() => {
+            const item = document.createElement('div');
+            item.className = 'med-infer-step';
+            item.innerHTML = `
+                <div class="med-step-num">${i + 1}</div>
+                <div class="med-step-content">
+                    <div class="med-step-title">${step.title}</div>
+                    <div class="med-step-detail">${step.detail}</div>
+                </div>
+            `;
+            log.appendChild(item);
+            log.scrollTop = log.scrollHeight;
+
+            // 动态更新置信度
+            if (i === 3) {
+                animateConfidence('conf1', 'conf1bar', 84);
+                animateConfidence('conf2', 'conf2bar', 76);
+                animateConfidence('conf3', 'conf3bar', 61);
+            }
+
+            // 完成后高亮虚线边
+            if (i === STEPS.length - 1) {
+                setTimeout(() => highlightMissing(), 500);
+            }
+        }, step.delay);
+    });
+}
+
+function animateConfidence(id, barId, value) {
+    const el = document.getElementById(id);
+    const bar = document.getElementById(barId);
+    let cur = 0;
+    const interval = setInterval(() => {
+        cur += 2;
+        if (cur >= value) { cur = value; clearInterval(interval); }
+        el.textContent = cur + '%';
+        bar.style.width = cur + '%';
+    }, 30);
+}
+
+function highlightMissing() {
+    // 虚线边变实线
+    medG.selectAll('line')
+        .filter(d => d.missing)
+        .transition().duration(800)
+        .attr('stroke-dasharray', '0,0')
+        .attr('stroke', '#4db6ac')
+        .attr('marker-end', 'url(#med-arrow)');
+
+    // 边标签更新
+    const labels = { '?不良反应': '不良反应', '?合并用药': '合并用药', '?需验证': '需进一步验证' };
+    medG.selectAll('text')
+        .filter(d => d.missing)
+        .transition().duration(800)
+        .text(d => labels[d.type] || d.type)
+        .attr('fill', '#4db6ac');
+}
+
+function resetMedGraph() {
+    initMedGraph();
+    document.getElementById('medInferLog').innerHTML = `
+        <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
+            <i class="fas fa-brain" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+            点击"启动知识补全"查看推理路径
+        </div>`;
+    ['conf1','conf2','conf3'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+        document.getElementById(id + 'bar').style.width = '0%';
+    });
+}
+
+window.addEventListener('load', () => initMedGraph());
+window.addEventListener('resize', () => initMedGraph());
+</script>
+</body>
+</html>
