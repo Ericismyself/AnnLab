@@ -3,290 +3,476 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>知识图谱构建 — 奶业金融</title>
-    <link rel="stylesheet" href="../../css/kg.css">
+    <title>知识图谱构建 · 奶业金融</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .kg-demo-layout {
+        /* ── 页面布局 ── */
+        body { background: #0a0a0f; }
+
+        .demo-header {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(0,245,255,0.12);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .demo-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00f5ff;
+            text-shadow: 0 0 12px rgba(0,245,255,0.6), 0 0 30px rgba(0,245,255,0.25);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .demo-title i { color: #00f5ff; }
+
+        .demo-subtitle {
+            font-size: 0.82rem;
+            color: #7a7a8c;
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-badge {
+            font-size: 0.6rem;
+            padding: 3px 10px;
+            border: 1px solid #ff2d78;
+            color: #ff2d78;
+            border-radius: 2px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: rgba(255,45,120,0.08);
+            margin-top: 8px;
+            display: inline-block;
+        }
+
+        .main-grid {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 400px 1fr;
             gap: 20px;
             align-items: start;
         }
-        .kg-graph-container {
-            background: rgba(0,0,0,0.25);
-            border: 1px solid var(--kg-border);
-            border-radius: 8px;
+
+        .left-col { display: flex; flex-direction: column; gap: 16px; }
+
+        /* ── 图谱区域 ── */
+        .graph-wrap {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,245,255,0.12);
+            border-radius: 4px;
             overflow: hidden;
             position: relative;
-            min-height: 480px;
+            min-height: 500px;
         }
-        #kg-graph {
-            width: 100%;
-            height: 480px;
+
+        .graph-wrap::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00f5ff, transparent);
+            opacity: 0.4;
         }
-        .kg-input-area { margin-bottom: 16px; }
-        .kg-input-area label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--kg-text-dim);
+
+        #kg-graph { width: 100%; height: 500px; display: block; }
+
+        .graph-legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(0,245,255,0.15);
+            border-radius: 3px;
+            padding: 8px 12px;
+        }
+
+        .legend-item {
+            font-size: 0.7rem;
+            color: #7a7a8c;
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-item:last-child { margin-bottom: 0; }
+
+        .legend-dot {
+            width: 8px; height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .graph-status-bar {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 6px 14px;
+            background: rgba(0,0,0,0.6);
+            border-top: 1px solid rgba(0,245,255,0.08);
+            font-size: 0.72rem;
+            color: #3a3a4a;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── 输入卡片 ── */
+        .input-label {
+            font-size: 0.7rem;
+            color: #7a7a8c;
             margin-bottom: 6px;
-            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .kg-textarea {
+
+        .cyber-input-area {
             width: 100%;
-            height: 88px;
-            background: rgba(0,0,0,0.35);
-            border: 1px solid var(--kg-border);
-            border-radius: 6px;
-            color: var(--kg-text);
-            font-family: var(--font-sans);
-            font-size: 0.82rem;
+            height: 90px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,245,255,0.12);
+            border-radius: 3px;
+            color: #e0e0e0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
             padding: 10px 12px;
             resize: none;
             outline: none;
+            line-height: 1.7;
+            caret-color: #00f5ff;
             transition: border-color 0.3s;
-            line-height: 1.6;
         }
-        .kg-textarea:focus {
-            border-color: var(--kg-blue-light);
-            box-shadow: 0 0 0 2px rgba(58,123,213,0.15);
+
+        .cyber-input-area:focus {
+            border-color: rgba(0,245,255,0.4);
+            box-shadow: 0 0 0 1px rgba(0,245,255,0.1), inset 0 0 8px rgba(0,245,255,0.03);
         }
-        .kg-sample-chips {
+
+        .chip-row {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
             margin-top: 8px;
         }
-        .kg-chip {
+
+        .chip {
             padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.7rem;
+            border: 1px solid rgba(0,245,255,0.15);
+            border-radius: 2px;
+            font-size: 0.65rem;
             cursor: pointer;
-            border: 1px solid var(--kg-border);
-            color: var(--kg-text-dim);
-            background: rgba(0,0,0,0.2);
+            color: #7a7a8c;
+            background: rgba(0,0,0,0.3);
             transition: all 0.2s;
-            font-family: var(--font-sans);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
         }
-        .kg-chip:hover {
-            border-color: var(--kg-blue);
-            color: var(--kg-blue-light);
-            background: rgba(58,123,213,0.1);
+
+        .chip:hover {
+            border-color: #00f5ff;
+            color: #00f5ff;
+            background: rgba(0,245,255,0.06);
         }
-        .kg-chip.active {
-            border-color: var(--kg-blue);
-            color: var(--kg-blue-light);
-            background: rgba(58,123,213,0.15);
+
+        .chip.active {
+            border-color: #00f5ff;
+            color: #00f5ff;
+            background: rgba(0,245,255,0.1);
+            box-shadow: 0 0 6px rgba(0,245,255,0.2);
         }
-        .kg-actions {
+
+        .btn-row {
             display: flex;
             gap: 10px;
             margin-top: 12px;
         }
-        .kg-node-panel {
+
+        /* ── 节点面板 ── */
+        .node-panel {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 220px;
-            background: var(--kg-bg-card);
-            border: 1px solid var(--kg-border);
-            border-radius: 8px;
+            top: 12px;
+            right: 12px;
+            width: 240px;
+            background: rgba(13,17,23,0.95);
+            border: 1px solid rgba(0,245,255,0.2);
+            border-radius: 4px;
             z-index: 10;
-            animation: kgFadeIn 0.25s ease;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            animation: fadeIn 0.2s ease;
+            overflow: hidden;
         }
-        .kg-node-panel-header {
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .node-panel-hdr {
             padding: 10px 14px;
-            border-bottom: 1px solid var(--kg-border);
+            border-bottom: 1px solid rgba(0,245,255,0.12);
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-        .kg-node-panel-header span {
+
+        .node-panel-hdr span {
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--kg-white);
+            color: #e0e0e0;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .kg-node-type-badge {
-            display: inline-block;
+
+        .node-type-tag {
+            font-size: 0.6rem;
             padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            border-radius: 2px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .kg-node-panel-body { padding: 12px 14px; }
-        .kg-node-panel-row {
+
+        .node-panel-body { padding: 12px 14px; }
+
+        .node-row {
             display: flex;
             justify-content: space-between;
+            font-size: 0.78rem;
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .node-row:last-child { margin-bottom: 0; }
+
+        .node-row .lbl { color: #3a3a4a; }
+
+        .node-row .val { color: #e0e0e0; font-weight: 500; }
+
+        .node-row .val.desc {
+            font-size: 0.72rem;
+            color: #7a7a8c;
+            line-height: 1.5;
+        }
+
+        /* ── 右侧面板 ── */
+        .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+        .section-title {
+            font-size: 0.72rem;
+            color: #00f5ff;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            display: flex;
             align-items: center;
-            font-size: 0.8rem;
-            margin-bottom: 7px;
+            gap: 8px;
+            opacity: 0.8;
         }
-        .kg-node-panel-row:last-child { margin-bottom: 0; }
-        .kg-node-panel-row .lbl { color: var(--kg-text-dim); }
-        .kg-node-panel-row .val { color: var(--kg-text); font-weight: 500; }
-        .kg-graph-legend {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid var(--kg-border);
-            border-radius: 6px;
-            padding: 8px 12px;
-        }
-        .kg-graph-legend .kg-legend-item { font-size: 0.72rem; margin-bottom: 4px; }
-        .kg-graph-legend .kg-legend-item:last-child { margin-bottom: 0; }
-        .kg-progress-wrap {
-            margin-top: 12px;
-            display: none;
-        }
-        .kg-progress-label {
-            font-size: 0.75rem;
-            color: var(--kg-text-dim);
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .kg-status-bar {
-            padding: 6px 14px;
-            background: rgba(0,0,0,0.3);
-            border-top: 1px solid var(--kg-border);
-            font-size: 0.75rem;
-            color: var(--kg-text-dim);
-            display: flex;
-            justify-content: space-between;
-        }
-        .kg-right-panel { display: flex; flex-direction: column; gap: 16px; }
-        .kg-extraction-log {
+
+        .extract-log {
             max-height: 220px;
             overflow-y: auto;
         }
-        .kg-extraction-log::-webkit-scrollbar { width: 4px; }
-        .kg-extraction-log::-webkit-scrollbar-thumb { background: var(--kg-blue); border-radius: 2px; }
-        .kg-extract-item {
+
+        .extract-log::-webkit-scrollbar { width: 3px; }
+        .extract-log::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.3); border-radius: 2px; }
+
+        .extract-item {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(58,123,213,0.1);
+            gap: 10px;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(0,245,255,0.06);
             font-size: 0.8rem;
-            animation: kgFadeIn 0.3s ease;
+            animation: fadeIn 0.3s ease;
         }
-        .kg-extract-item:last-child { border-bottom: none; }
-        .kg-extract-icon {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
+
+        .extract-item:last-child { border-bottom: none; }
+
+        .extract-icon {
+            width: 24px; height: 24px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             flex-shrink: 0;
             margin-top: 1px;
         }
-        .kg-extract-text { flex: 1; color: var(--kg-text); line-height: 1.5; }
-        .kg-extract-text strong { font-weight: 600; }
-        .kg-relation-list { display: flex; flex-direction: column; gap: 8px; }
-        .kg-rel-item {
+
+        .extract-text { flex: 1; line-height: 1.5; }
+
+        .extract-text .ename { font-weight: 600; }
+
+        .extract-text .etype { margin-left: 4px; }
+
+        .extract-text .edesc { color: #3a3a4a; font-size: 0.72rem; margin-top: 2px; }
+
+        /* ── 关系列表 ── */
+        .rel-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .rel-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 6px;
-            border-left: 3px solid var(--kg-blue);
-            font-size: 0.82rem;
-            animation: kgFadeIn 0.3s ease;
+            gap: 8px;
+            padding: 9px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            border-left: 2px solid #00f5ff;
+            font-size: 0.8rem;
+            animation: fadeIn 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .kg-rel-from, .kg-rel-to { font-weight: 600; color: var(--kg-white); }
-        .kg-rel-arrow { color: var(--kg-blue-light); }
-        .kg-rel-type { color: var(--kg-text-dim); flex: 1; text-align: center; font-size: 0.75rem; }
+
+        .rel-from, .rel-to { font-weight: 600; color: #e0e0e0; font-size: 0.78rem; }
+
+        .rel-arrow { color: #00f5ff; flex-shrink: 0; }
+
+        .rel-type { color: #3a3a4a; flex: 1; text-align: center; font-size: 0.7rem; }
+
+        /* ── 进度条 ── */
+        .progress-wrap { margin-top: 12px; display: none; }
+
+        .progress-label {
+            font-size: 0.72rem;
+            color: #3a3a4a;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #00f5ff, rgba(0,245,255,0.5));
+            transition: width 0.4s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 1.5s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* ── 响应式 ── */
         @media (max-width: 900px) {
-            .kg-demo-layout { grid-template-columns: 1fr; }
+            .main-grid { grid-template-columns: 1fr; }
             #kg-graph { height: 380px; }
-            .kg-graph-container { min-height: 380px; }
+            .graph-wrap { min-height: 380px; }
         }
     </style>
 </head>
-<body class="kg-body">
-<div class="kg-grid-bg"></div>
-<div class="kg-container kg-main">
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
 
-    <div class="kg-page-header">
-        <h1 class="kg-page-title"><i class="fas fa-project-diagram"></i>知识图谱构建</h1>
-        <p class="kg-page-desc">输入文本，自动完成实体识别、关系抽取与知识图谱构建，以奶业金融供应链场景为例</p>
-        <span class="kg-page-tag finance"><i class="fas fa-industry"></i> 奶业金融</span>
+<div class="cyber-container cyber-main" style="padding-top:20px;">
+
+    <div class="demo-header">
+        <div>
+            <h1 class="demo-title">
+                <i class="fas fa-project-diagram"></i>KG Construction
+            </h1>
+            <p class="demo-subtitle">// 实体识别 · 关系抽取 · 奶业金融供应链知识图谱构建</p>
+            <span class="demo-badge">奶业金融</span>
+        </div>
     </div>
 
-    <div class="kg-demo-layout">
-        <!-- 左侧：输入+图谱 -->
-        <div style="display:flex;flex-direction:column;gap:16px;">
-            <div class="kg-card">
-                <div class="kg-section-title"><i class="fas fa-keyboard"></i> 文本输入</div>
-                <div class="kg-input-area">
-                    <label>输入文本片段（乳制品供应链描述）</label>
-                    <textarea class="kg-textarea" id="kgInput" placeholder="输入一段描述，系统将自动抽取实体和关系...">伊利实业集团从规模化牧场A采购生鲜牛乳，加工生产安慕希酸奶，供应至全国电商平台。电商平台为牧场A提供供应链金融贷款服务。</textarea>
-                    <div class="kg-sample-chips">
-                        <span class="kg-chip active" onclick="setSample(0,this)">供应链示例</span>
-                        <span class="kg-chip" onclick="setSample(1,this)">牧场金融</span>
-                        <span class="kg-chip" onclick="setSample(2,this)">产品分销</span>
-                    </div>
+    <div class="main-grid">
+        <!-- 左列 -->
+        <div class="left-col">
+            <div class="cyber-card">
+                <div class="section-title"><i class="fas fa-terminal"></i> 文本输入</div>
+                <label class="input-label">输入乳制品供应链描述文本</label>
+                <textarea class="cyber-input-area" id="kgInput">伊利实业集团从规模化牧场A采购生鲜牛乳，加工生产安慕希酸奶，供应至全国电商平台。电商平台为牧场A提供供应链金融贷款服务。</textarea>
+                <div class="chip-row">
+                    <span class="chip active" onclick="setSample(0,this)">供应链示例</span>
+                    <span class="chip" onclick="setSample(1,this)">牧场金融</span>
+                    <span class="chip" onclick="setSample(2,this)">产品分销</span>
                 </div>
-                <div class="kg-actions">
-                    <button class="kg-btn kg-btn-primary" id="buildBtn" onclick="buildGraph()">
+                <div class="btn-row">
+                    <button class="cyber-btn green" id="buildBtn" onclick="buildGraph()">
                         <i class="fas fa-bolt"></i> 构建图谱
                     </button>
-                    <button class="kg-btn kg-btn-ghost" onclick="resetGraph()">
+                    <button class="cyber-btn" onclick="resetGraph()">
                         <i class="fas fa-redo"></i> 重置
                     </button>
                 </div>
-                <div class="kg-progress-wrap" id="kgProgress">
-                    <div class="kg-progress-label">
-                        <span id="kgProgressText">正在分析文本...</span>
-                        <span id="kgProgressPct">0%</span>
+                <div class="progress-wrap" id="kgProgress">
+                    <div class="progress-label">
+                        <span id="kgProgressText">分析中...</span>
+                        <span id="kgProgressPct" style="color:#00f5ff;">0%</span>
                     </div>
-                    <div class="kg-progress">
-                        <div class="kg-progress-bar" id="kgProgressBar" style="width:0%"></div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="kgProgressBar" style="width:0%"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="kg-card kg-graph-container" style="flex:1;">
+            <div class="graph-wrap">
                 <div id="kg-graph"></div>
-                <div class="kg-graph-legend">
-                    <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-blue)"></span> 企业/工厂</div>
-                    <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-green)"></span> 产品/原料</div>
-                    <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-gold)"></span> 金融产品</div>
-                    <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-purple)"></span> 渠道</div>
+                <div class="graph-legend">
+                    <div class="legend-item"><span class="legend-dot" style="background:#00f5ff"></span> 企业/工厂</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#30d158"></span> 产品/原料</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#ffd60a"></span> 金融产品</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#bf5af2"></span> 渠道</div>
                 </div>
-                <div id="kgStatusBar" class="kg-status-bar">
-                    <span><i class="fas fa-circle" style="font-size:0.5rem;color:var(--kg-green-light)"></i> 等待构建</span>
-                    <span id="kgStatText">节点 0 / 关系 0</span>
+                <div class="graph-status-bar" id="kgStatusBar">
+                    <span><i class="fas fa-circle" style="font-size:0.45rem;color:#30d158;margin-right:4px;"></i> 等待构建</span>
+                    <span id="kgStatText">NODE 0 / EDGE 0</span>
                 </div>
             </div>
         </div>
 
-        <!-- 右侧：提取结果+关系 -->
-        <div class="kg-right-panel">
-            <div class="kg-card">
-                <div class="kg-section-title"><i class="fas fa-tags"></i> 实体抽取</div>
-                <div class="kg-extraction-log" id="kgExtractLog">
-                    <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-                        <i class="fas fa-search" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
-                        点击"构建图谱"开始实体抽取
+        <!-- 右列 -->
+        <div class="right-col">
+            <div class="cyber-card">
+                <div class="section-title"><i class="fas fa-crosshairs"></i> 实体抽取</div>
+                <div class="extract-log" id="kgExtractLog">
+                    <div style="text-align:center;padding:40px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+                        <i class="fas fa-terminal" style="font-size:1.4rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
+                        点击"构建图谱"开始分析
                     </div>
                 </div>
             </div>
 
-            <div class="kg-card">
-                <div class="kg-section-title"><i class="fas fa-link"></i> 关系边</div>
-                <div class="kg-relation-list" id="kgRelList">
-                    <div style="text-align:center;padding:30px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-                        <i class="fas fa-arrows-alt-h" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
-                        关系抽取结果将在此处展示
+            <div class="cyber-card">
+                <div class="section-title"><i class="fas fa-link"></i> 关系边</div>
+                <div class="rel-list" id="kgRelList">
+                    <div style="text-align:center;padding:30px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+                        <i class="fas fa-project-diagram" style="font-size:1.2rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
+                        关系抽取结果将显示于此
                     </div>
                 </div>
             </div>
@@ -296,7 +482,6 @@
 </div>
 
 <script>
-// ── 示例文本数据 ──
 const SAMPLE_TEXTS = [
     '伊利实业集团从规模化牧场A采购生鲜牛乳，加工生产安慕希酸奶，供应至全国电商平台。电商平台为牧场A提供供应链金融贷款服务。',
     '散户奶农向伊利供应生鲜牛乳，伊利为符合条件的牧场提供奶款预付款金融支持。金典有机纯牛奶通过便利店渠道进入千家万户。',
@@ -304,233 +489,202 @@ const SAMPLE_TEXTS = [
 ];
 
 const ENTITY_COLORS = {
-    enterprise: { fill: '#3a7bd5', stroke: '#5b9cf6', text: '#fff' },
-    product:    { fill: '#2d8659', stroke: '#4caf7d', text: '#fff' },
-    raw:         { fill: '#2d8659', stroke: '#4caf7d', text: '#fff' },
-    finance:     { fill: '#c9920a', stroke: '#e8b840', text: '#fff' },
-    channel:     { fill: '#7c4dff', stroke: '#a47cff', text: '#fff' },
-    location:    { fill: '#5b6c8c', stroke: '#8a9cbf', text: '#fff' },
+    enterprise: { fill: '#00f5ff', stroke: 'rgba(0,245,255,0.4)', glow: '#00f5ff' },
+    product:    { fill: '#30d158', stroke: 'rgba(48,209,88,0.4)', glow: '#30d158' },
+    raw:        { fill: '#30d158', stroke: 'rgba(48,209,88,0.4)', glow: '#30d158' },
+    finance:    { fill: '#ffd60a', stroke: 'rgba(255,214,10,0.4)', glow: '#ffd60a' },
+    channel:    { fill: '#bf5af2', stroke: 'rgba(191,90,242,0.4)', glow: '#bf5af2' },
+    location:   { fill: '#ff9500', stroke: 'rgba(255,149,0,0.4)', glow: '#ff9500' },
 };
 
 const ENTITY_TYPE_LABELS = {
-    enterprise: '企业',
-    product: '产品',
-    raw: '原料',
-    finance: '金融',
-    channel: '渠道',
-    location: '地点',
+    enterprise: '企业', product: '产品', raw: '原料',
+    finance: '金融', channel: '渠道', location: '地点',
 };
 
-// 预定义知识图谱数据（根据文本自动分析）
 const KG_DATA = [
     {
         text: SAMPLE_TEXTS[0],
         entities: [
-            { id: 'e1', name: '伊利实业集团', type: 'enterprise', desc: '中国乳制品行业龙头企业' },
-            { id: 'e2', name: '规模化牧场A', type: 'enterprise', desc: '内蒙古大型现代化牧场' },
-            { id: 'p1', name: '生鲜牛乳', type: 'raw', desc: '原料奶，含蛋白质3.0%以上' },
-            { id: 'p2', name: '安慕希酸奶', type: 'product', desc: '希腊风味酸奶，年销售额超百亿' },
-            { id: 'c1', name: '电商平台', type: 'channel', desc: '线上B2C销售渠道' },
-            { id: 'f1', name: '供应链金融贷款', type: 'finance', desc: '基于贸易信用的融资服务' },
+            { id:'e1', name:'伊利实业集团', type:'enterprise', desc:'中国乳制品行业龙头企业' },
+            { id:'e2', name:'规模化牧场A', type:'enterprise', desc:'内蒙古大型现代化牧场' },
+            { id:'p1', name:'生鲜牛乳', type:'raw', desc:'原料奶，含蛋白质3.0%以上' },
+            { id:'p2', name:'安慕希酸奶', type:'product', desc:'希腊风味酸奶，年销售额超百亿' },
+            { id:'c1', name:'电商平台', type:'channel', desc:'线上B2C销售渠道' },
+            { id:'f1', name:'供应链金融贷款', type:'finance', desc:'基于贸易信用的融资服务' },
         ],
         relations: [
-            { source: 'e1', target: 'e2', type: '采购', desc: '原料采购协议' },
-            { source: 'e2', target: 'p1', type: '供应', desc: '日产5吨' },
-            { source: 'p1', target: 'p2', type: '加工', desc: '超高温灭菌工艺' },
-            { source: 'p2', target: 'c1', type: '分销', desc: '日均发货10万件' },
-            { source: 'c1', target: 'e2', type: '融资', desc: '贷款额度50万元' },
+            { source:'e1', target:'e2', type:'采购', desc:'原料采购协议' },
+            { source:'e2', target:'p1', type:'供应', desc:'日产5吨' },
+            { source:'p1', target:'p2', type:'加工', desc:'超高温灭菌工艺' },
+            { source:'p2', target:'c1', type:'分销', desc:'日均发货10万件' },
+            { source:'c1', target:'e2', type:'融资', desc:'贷款额度50万元' },
         ]
     },
     {
         text: SAMPLE_TEXTS[1],
         entities: [
-            { id: 'e3', name: '散户奶农', type: 'enterprise', desc: '小型个体养殖户' },
-            { id: 'e1', name: '伊利实业集团', type: 'enterprise', desc: '中国乳制品行业龙头企业' },
-            { id: 'p1', name: '生鲜牛乳', type: 'raw', desc: '原料奶，含蛋白质3.0%以上' },
-            { id: 'f2', name: '奶款预付款', type: 'finance', desc: '产前金融支持服务' },
-            { id: 'p3', name: '金典有机纯牛奶', type: 'product', desc: '有机高端纯牛奶系列' },
-            { id: 'c2', name: '便利店', type: 'channel', desc: '社区零售终端' },
+            { id:'e3', name:'散户奶农', type:'enterprise', desc:'小型个体养殖户' },
+            { id:'e1', name:'伊利实业集团', type:'enterprise', desc:'中国乳制品行业龙头企业' },
+            { id:'p1', name:'生鲜牛乳', type:'raw', desc:'原料奶，含蛋白质3.0%以上' },
+            { id:'f2', name:'奶款预付款', type:'finance', desc:'产前金融支持服务' },
+            { id:'p3', name:'金典有机纯牛奶', type:'product', desc:'有机高端纯牛奶系列' },
+            { id:'c2', name:'便利店', type:'channel', desc:'社区零售终端' },
         ],
         relations: [
-            { source: 'e3', target: 'e1', type: '供应', desc: '日均500kg' },
-            { source: 'e1', target: 'e3', type: '预付款', desc: '产前资金垫付' },
-            { source: 'e1', target: 'p1', type: '采购', desc: '原料检验入库' },
-            { source: 'p1', target: 'p3', type: '加工', desc: '有机认证工艺' },
-            { source: 'p3', target: 'c2', type: '分销', desc: '冷链配送' },
+            { source:'e3', target:'e1', type:'供应', desc:'日均500kg' },
+            { source:'e1', target:'e3', type:'预付款', desc:'产前资金垫付' },
+            { source:'e1', target:'p1', type:'采购', desc:'原料检验入库' },
+            { source:'p1', target:'p3', type:'加工', desc:'有机认证工艺' },
+            { source:'p3', target:'c2', type:'分销', desc:'冷链配送' },
         ]
     },
     {
         text: SAMPLE_TEXTS[2],
         entities: [
-            { id: 'p4', name: 'QQ星儿童奶', type: 'product', desc: '专为3-12岁儿童研发' },
-            { id: 'e1', name: '伊利实业集团', type: 'enterprise', desc: '中国乳制品行业龙头企业' },
-            { id: 'c1', name: '电商平台', type: 'channel', desc: '线上B2C销售渠道' },
-            { id: 'c3', name: '线下商超', type: 'channel', desc: '大型连锁超市' },
-            { id: 'l1', name: '内蒙古', type: 'location', desc: '优质奶源核心产区' },
-            { id: 'e2', name: '规模化牧场A', type: 'enterprise', desc: '内蒙古大型现代化牧场' },
+            { id:'p4', name:'QQ星儿童奶', type:'product', desc:'专为3-12岁儿童研发' },
+            { id:'e1', name:'伊利实业集团', type:'enterprise', desc:'中国乳制品行业龙头企业' },
+            { id:'c1', name:'电商平台', type:'channel', desc:'线上B2C销售渠道' },
+            { id:'c3', name:'线下商超', type:'channel', desc:'大型连锁超市' },
+            { id:'l1', name:'内蒙古', type:'location', desc:'优质奶源核心产区' },
+            { id:'e2', name:'规模化牧场A', type:'enterprise', desc:'内蒙古大型现代化牧场' },
         ],
         relations: [
-            { source: 'e1', target: 'p4', type: '生产', desc: '智能化生产线' },
-            { source: 'p4', target: 'c1', type: '分销', desc: '电商直营' },
-            { source: 'p4', target: 'c3', type: '分销', desc: '全国铺货' },
-            { source: 'e1', target: 'l1', type: '布局', desc: '10座自有牧场' },
-            { source: 'e1', target: 'e2', type: '合作', desc: '长期供应协议' },
+            { source:'e1', target:'p4', type:'生产', desc:'智能化生产线' },
+            { source:'p4', target:'c1', type:'分销', desc:'电商直营' },
+            { source:'p4', target:'c3', type:'分销', desc:'全国铺货' },
+            { source:'e1', target:'l1', type:'布局', desc:'10座自有牧场' },
+            { source:'e1', target:'e2', type:'合作', desc:'长期供应协议' },
         ]
     }
 ];
 
-let sim, svg, g, currentSample = 0;
+let sim, currentSample = 0;
 
-// 初始化 D3 力导向图
 function initGraph() {
     const container = document.getElementById('kg-graph');
-    const W = container.clientWidth;
-    const H = container.clientHeight;
-
+    const W = container.clientWidth, H = container.clientHeight;
     d3.select('#kg-graph').selectAll('*').remove();
 
-    svg = d3.select('#kg-graph')
-        .append('svg')
-        .attr('width', W)
-        .attr('height', H)
-        .attr('viewBox', [0, 0, W, H]);
+    const svg = d3.select('#kg-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0,0,W,H]);
 
     // 缩放
-    const zoom = d3.zoom()
-        .scaleExtent([0.4, 3])
-        .on('zoom', (e) => g.attr('transform', e.transform));
-
+    const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => g.attr('transform', e.transform));
     svg.call(zoom);
     svg.on('dblclick.zoom', null);
 
-    // 箭头标记
+    // 箭头
     svg.append('defs').append('marker')
-        .attr('id', 'arrowhead')
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 28)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
+        .attr('id', 'arrow')
+        .attr('viewBox','0 -5 10 10')
+        .attr('refX', 28).attr('refY', 0)
+        .attr('markerWidth', 6).attr('markerHeight', 6)
         .attr('orient', 'auto')
         .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'rgba(58,123,213,0.6)');
+        .attr('d','M0,-5L10,0L0,5')
+        .attr('fill','rgba(0,245,255,0.5)');
 
-    g = svg.append('g');
-
+    const g = svg.append('g');
     sim = d3.forceSimulation()
-        .force('link', d3.forceLink().id(d => d.id).distance(120))
-        .force('charge', d3.forceManyBody().strength(-400))
-        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('link', d3.forceLink().id(d=>d.id).distance(130))
+        .force('charge', d3.forceManyBody().strength(-420))
+        .force('center', d3.forceCenter(W/2, H/2))
         .force('collision', d3.forceCollide(40));
+    return g;
 }
 
+let gRef;
+
 function renderGraph(data, animate) {
-    g.selectAll('*').remove();
+    gRef.selectAll('*').remove();
 
-    // 关系边
-    const link = g.append('g')
-        .selectAll('line')
-        .data(data.relations)
-        .enter().append('line')
-        .attr('stroke', 'rgba(58,123,213,0.45)')
+    const link = gRef.append('g').selectAll('line')
+        .data(data.relations).enter().append('line')
+        .attr('stroke','rgba(0,245,255,0.35)')
         .attr('stroke-width', 1.5)
-        .attr('marker-end', 'url(#arrowhead)');
+        .attr('marker-end','url(#arrow)');
 
-    // 关系标签
-    const linkLabel = g.append('g')
-        .selectAll('text')
-        .data(data.relations)
-        .enter().append('text')
-        .text(d => d.type)
+    const linkLabel = gRef.append('g').selectAll('text')
+        .data(data.relations).enter().append('text')
+        .text(d=>d.type)
         .attr('font-size', 10)
-        .attr('fill', 'rgba(91,156,246,0.8)')
-        .attr('text-anchor', 'middle')
-        .attr('background', 'rgba(12,21,36,0.8)');
+        .attr('fill','rgba(0,245,255,0.6)')
+        .attr('text-anchor','middle')
+        .attr('font-family','JetBrains Mono, monospace');
 
-    // 节点组
-    const node = g.append('g')
-        .selectAll('g')
-        .data(data.entities)
-        .enter().append('g')
-        .attr('cursor', 'pointer')
+    const node = gRef.append('g').selectAll('g')
+        .data(data.entities).enter().append('g')
+        .attr('cursor','pointer')
         .call(d3.drag()
-            .on('start', dragstarted)
-            .on('drag', dragged)
-            .on('end', dragended))
-        .on('click', (event, d) => showNodePanel(d, event));
+            .on('start', (e,d)=>{ if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+            .on('drag', (e,d)=>{ d.fx=e.x; d.fy=e.y; })
+            .on('end', (e,d)=>{ if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }))
+        .on('click', (e,d)=>{ e.stopPropagation(); showNodePanel(d); });
 
-    // 节点背景
+    // 外发光
+    node.append('circle')
+        .attr('r', 24)
+        .attr('fill','none')
+        .attr('stroke', d=>ENTITY_COLORS[d.type].glow)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i)=>animate?i*120:0).duration(600)
+        .attr('opacity', 0.2);
+
     node.append('rect')
-        .attr('width', d => Math.max(d.name.length * 15 + 32, 90))
+        .attr('width', d=>Math.max(d.name.length*15+30,90))
         .attr('height', 32)
-        .attr('x', d => -(Math.max(d.name.length * 15 + 32, 90)) / 2)
+        .attr('x', d=>-(Math.max(d.name.length*15+30,90))/2)
         .attr('y', -16)
-        .attr('rx', 6)
-        .attr('fill', d => ENTITY_COLORS[d.type].fill)
-        .attr('stroke', d => ENTITY_COLORS[d.type].stroke)
+        .attr('rx', 4)
+        .attr('fill', d=>ENTITY_COLORS[d.type].fill)
+        .attr('stroke', d=>ENTITY_COLORS[d.type].stroke)
         .attr('stroke-width', 1.5)
+        .attr('filter', 'url(#glow)')
         .attr('opacity', 0)
-        .transition()
-        .delay((d, i) => animate ? i * 120 : 0)
-        .duration(500)
+        .transition().delay((d,i)=>animate?i*120:0).duration(500)
         .attr('opacity', 1);
 
-    // 节点类型图标
+    const icons = {enterprise:'◆',product:'●',raw:'▲',finance:'★',channel:'■',location:'▼'};
     node.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'central')
+        .text(d=>icons[d.type]||'●')
         .attr('font-size', 11)
-        .attr('fill', '#fff')
-        .attr('font-weight', '600')
-        .attr('x', -Math.max(0, 0) + 0)
+        .attr('fill','rgba(0,0,0,0.7)')
+        .attr('x', d=>-(Math.max(d.name.length*15+30,90))/2+8)
+        .attr('y', 4)
         .attr('opacity', 0)
-        .text(d => {
-            const icons = { enterprise: '◆', product: '●', raw: '▲', finance: '★', channel: '■', location: '▼' };
-            return icons[d.type] || '●';
-        })
-        .attr('x', -22)
-        .transition()
-        .delay((d, i) => animate ? i * 120 : 0)
-        .duration(400)
+        .transition().delay((d,i)=>animate?i*120:0).duration(400)
         .attr('opacity', 1);
 
-    // 节点文字
     node.append('text')
-        .text(d => d.name)
-        .attr('text-anchor', 'start')
-        .attr('dominant-baseline', 'central')
+        .text(d=>d.name)
+        .attr('text-anchor','start')
+        .attr('dominant-baseline','central')
         .attr('font-size', 12)
-        .attr('fill', '#fff')
-        .attr('font-weight', '500')
-        .attr('x', -10)
+        .attr('fill','#0a0a0f')
+        .attr('font-weight','600')
+        .attr('x', d=>-(Math.max(d.name.length*15+30,90))/2+22)
         .attr('opacity', 0)
-        .transition()
-        .delay((d, i) => animate ? i * 120 + 200 : 0)
-        .duration(400)
+        .transition().delay((d,i)=>animate?i*120+200:0).duration(400)
         .attr('opacity', 1);
 
-    sim.nodes(data.entities).on('tick', () => {
+    sim.nodes(data.entities).on('tick',()=>{
         link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
-
+            .attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+            .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
         linkLabel
-            .attr('x', d => (d.source.x + d.target.x) / 2)
-            .attr('y', d => (d.source.y + d.target.y) / 2);
-
-        node.attr('transform', d => `translate(${d.x},${d.y})`);
+            .attr('x',d=>(d.source.x+d.target.x)/2)
+            .attr('y',d=>(d.source.y+d.target.y)/2);
+        node.attr('transform',d=>`translate(${d.x},${d.y})`);
     });
 
     sim.force('link').links(data.relations);
     sim.alpha(1).restart();
 
-    document.getElementById('kgStatText').textContent = `节点 ${data.entities.length} / 关系 ${data.relations.length}`;
+    document.getElementById('kgStatText').textContent = `NODE ${data.entities.length} / EDGE ${data.relations.length}`;
 }
 
-function showNodePanel(d, event) {
+function showNodePanel(d) {
     const col = ENTITY_COLORS[d.type] || ENTITY_COLORS.enterprise;
     const label = ENTITY_TYPE_LABELS[d.type] || '实体';
     const existing = document.getElementById('kgNodePanel');
@@ -538,39 +692,25 @@ function showNodePanel(d, event) {
 
     const panel = document.createElement('div');
     panel.id = 'kgNodePanel';
-    panel.className = 'kg-node-panel';
+    panel.className = 'node-panel';
     panel.innerHTML = `
-        <div class="kg-node-panel-header">
+        <div class="node-panel-hdr">
             <span>${d.name}</span>
-            <span class="kg-node-type-badge" style="background:${col.fill}22;color:${col.stroke};border:1px solid ${col.fill}44">${label}</span>
+            <span class="node-type-tag" style="background:${col.fill}22;color:${col.fill};border:1px solid ${col.fill}44">${label}</span>
         </div>
-        <div class="kg-node-panel-body">
-            <div class="kg-node-panel-row"><span class="lbl">名称</span><span class="val">${d.name}</span></div>
-            <div class="kg-node-panel-row"><span class="lbl">类型</span><span class="val">${label}</span></div>
-            <div class="kg-node-panel-row"><span class="lbl">描述</span><span class="val" style="font-size:0.75rem;line-height:1.4;">${d.desc}</span></div>
+        <div class="node-panel-body">
+            <div class="node-row"><span class="lbl">名称</span><span class="val">${d.name}</span></div>
+            <div class="node-row"><span class="lbl">类型</span><span class="val">${label}</span></div>
+            <div class="node-row"><span class="lbl">描述</span><span class="val desc">${d.desc}</span></div>
         </div>
     `;
-    document.querySelector('.kg-graph-container').appendChild(panel);
-    panel.addEventListener('click', e => e.stopPropagation());
-}
-
-function dragstarted(event, d) {
-    if (!event.active) sim.alphaTarget(0.3).restart();
-    d.fx = d.x; d.fy = d.y;
-}
-
-function dragged(event, d) {
-    d.fx = event.x; d.fy = event.y;
-}
-
-function dragended(event, d) {
-    if (!event.active) sim.alphaTarget(0);
-    d.fx = null; d.fy = null;
+    document.querySelector('.graph-wrap').appendChild(panel);
+    panel.addEventListener('click', e=>e.stopPropagation());
 }
 
 function setSample(idx, el) {
     currentSample = idx;
-    document.querySelectorAll('.kg-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('kgInput').value = SAMPLE_TEXTS[idx];
 }
@@ -581,25 +721,22 @@ function buildGraph() {
     const bar = document.getElementById('kgProgressBar');
     const pct = document.getElementById('kgProgressPct');
     const text = document.getElementById('kgProgressText');
-    const log = document.getElementById('kgExtractLog');
-    const relList = document.getElementById('kgRelList');
-    const statusBar = document.getElementById('kgStatusBar');
 
     progress.style.display = 'block';
     bar.style.width = '0%';
     pct.textContent = '0%';
-    text.textContent = '正在分词...';
+    text.textContent = '分词中...';
 
-    let step = 0;
     const STEPS = [
-        { label: '正在分词...', pct: 15 },
-        { label: '正在实体识别...', pct: 40 },
-        { label: '正在关系抽取...', pct: 65 },
-        { label: '正在构建图谱...', pct: 85 },
-        { label: '完成', pct: 100 },
+        { label:'分词中...', pct:15 },
+        { label:'实体识别...', pct:40 },
+        { label:'关系抽取...', pct:65 },
+        { label:'构建图谱...', pct:85 },
+        { label:'完成', pct:100 },
     ];
 
-    const interval = setInterval(() => {
+    let step = 0;
+    const interval = setInterval(()=>{
         if (step < STEPS.length) {
             text.textContent = STEPS[step].label;
             bar.style.width = STEPS[step].pct + '%';
@@ -607,53 +744,55 @@ function buildGraph() {
             step++;
         } else {
             clearInterval(interval);
-            setTimeout(() => {
+            setTimeout(()=>{
                 progress.style.display = 'none';
-                statusBar.innerHTML = '<span><i class="fas fa-circle" style="font-size:0.5rem;color:var(--kg-green-light)"></i> 构建完成</span><span id="kgStatText"></span>';
+                document.getElementById('kgStatusBar').innerHTML =
+                    '<span><i class="fas fa-circle" style="font-size:0.45rem;color:#30d158;margin-right:4px;"></i> 构建完成</span><span id="kgStatText"></span>';
 
-                // 填充实体抽取日志
-                let logHTML = '';
-                data.entities.forEach((e, i) => {
+                const log = document.getElementById('kgExtractLog');
+                log.innerHTML = '';
+                data.entities.forEach((e,i)=>{
                     const col = ENTITY_COLORS[e.type];
                     const label = ENTITY_TYPE_LABELS[e.type];
-                    setTimeout(() => {
+                    setTimeout(()=>{
                         const item = document.createElement('div');
-                        item.className = 'kg-extract-item';
+                        item.className = 'extract-item';
                         item.innerHTML = `
-                            <div class="kg-extract-icon" style="background:${col.fill}22;color:${col.stroke};border:1px solid ${col.fill}44">
+                            <div class="extract-icon" style="background:${col.fill}22;color:${col.fill};border:1px solid ${col.fill}33">
                                 <i class="fas fa-tag"></i>
                             </div>
-                            <div class="kg-extract-text">
-                                <strong style="color:${col.stroke}">${e.name}</strong>
-                                <span style="color:var(--kg-text-dim);margin-left:4px;">[${label}]</span>
-                                <div style="color:var(--kg-text-dim);font-size:0.75rem;margin-top:2px;">${e.desc}</div>
+                            <div class="extract-text">
+                                <span class="ename" style="color:${col.fill}">${e.name}</span>
+                                <span class="etype" style="color:#3a3a4a;">[${label}]</span>
+                                <div class="edesc">${e.desc}</div>
                             </div>
                         `;
                         log.appendChild(item);
-                    }, i * 150);
+                    }, i*150);
                 });
 
-                // 填充关系列表
-                let relHTML = '';
-                data.relations.forEach((r, i) => {
-                    const src = data.entities.find(e => e.id === r.source);
-                    const tgt = data.entities.find(e => e.id === r.target);
-                    setTimeout(() => {
+                const relList = document.getElementById('kgRelList');
+                relList.innerHTML = '';
+                data.relations.forEach((r,i)=>{
+                    const src = data.entities.find(e=>e.id===r.source);
+                    const tgt = data.entities.find(e=>e.id===r.target);
+                    setTimeout(()=>{
                         const item = document.createElement('div');
-                        item.className = 'kg-rel-item';
+                        item.className = 'rel-item';
                         item.style.borderLeftColor = ENTITY_COLORS[src.type].fill;
                         item.innerHTML = `
-                            <span class="kg-rel-from">${src ? src.name : r.source}</span>
-                            <span class="kg-rel-arrow">→</span>
-                            <span class="kg-rel-type">${r.type} · ${r.desc}</span>
-                            <span class="kg-rel-arrow">→</span>
-                            <span class="kg-rel-to">${tgt ? tgt.name : r.target}</span>
+                            <span class="rel-from">${src?src.name:r.source}</span>
+                            <span class="rel-arrow">→</span>
+                            <span class="rel-type">${r.type} · ${r.desc}</span>
+                            <span class="rel-arrow">→</span>
+                            <span class="rel-to">${tgt?tgt.name:r.target}</span>
                         `;
                         relList.appendChild(item);
-                    }, i * 200);
+                    }, i*200);
                 });
 
-                initGraph();
+                const g = initGraph();
+                gRef = g;
                 renderGraph(data, true);
             }, 300);
         }
@@ -661,38 +800,40 @@ function buildGraph() {
 }
 
 function resetGraph() {
-    initGraph();
+    const g = initGraph();
+    gRef = g;
     document.getElementById('kgExtractLog').innerHTML = `
-        <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-            <i class="fas fa-search" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
-            点击"构建图谱"开始实体抽取
+        <div style="text-align:center;padding:40px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+            <i class="fas fa-terminal" style="font-size:1.4rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
+            点击"构建图谱"开始分析
         </div>`;
     document.getElementById('kgRelList').innerHTML = `
-        <div style="text-align:center;padding:30px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-            <i class="fas fa-arrows-alt-h" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
-            关系抽取结果将在此处展示
+        <div style="text-align:center;padding:30px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+            <i class="fas fa-project-diagram" style="font-size:1.2rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
+            关系抽取结果将显示于此
         </div>`;
     document.getElementById('kgStatusBar').innerHTML = `
-        <span><i class="fas fa-circle" style="font-size:0.5rem;color:var(--kg-green-light)"></i> 等待构建</span>
-        <span>节点 0 / 关系 0</span>`;
+        <span><i class="fas fa-circle" style="font-size:0.45rem;color:#30d158;margin-right:4px;"></i> 等待构建</span>
+        <span>NODE 0 / EDGE 0</span>`;
     document.getElementById('kgProgress').style.display = 'none';
     const panel = document.getElementById('kgNodePanel');
     if (panel) panel.remove();
 }
 
-// 点击空白关闭面板
-document.addEventListener('click', () => {
+document.addEventListener('click', ()=>{
     const panel = document.getElementById('kgNodePanel');
     if (panel) panel.remove();
 });
 
-// 初始化
-window.addEventListener('load', () => initGraph());
-window.addEventListener('resize', () => {
+window.addEventListener('load', ()=>{
+    const g = initGraph();
+    gRef = g;
+});
+window.addEventListener('resize', ()=>{
     if (currentSample !== undefined) {
-        const data = KG_DATA[currentSample];
-        initGraph();
-        renderGraph(data, false);
+        const g = initGraph();
+        gRef = g;
+        renderGraph(KG_DATA[currentSample], false);
     }
 });
 </script>

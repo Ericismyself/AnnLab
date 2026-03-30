@@ -3,159 +3,343 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>知识补全 — 医疗领域</title>
-    <link rel="stylesheet" href="../../css/kg.css">
+    <title>知识补全 · 医疗领域</title>
+    <link rel="stylesheet" href="../../css/cyber.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .med-demo-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
-        .med-graph-area {
-            background: rgba(0,0,0,0.25);
-            border: 1px solid var(--kg-border);
-            border-radius: 8px;
+        body { background: #0a0a0f; }
+
+        .demo-header {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(0,245,255,0.12);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .demo-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00f5ff;
+            text-shadow: 0 0 12px rgba(0,245,255,0.6), 0 0 30px rgba(0,245,255,0.25);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .demo-title i { color: #00f5ff; }
+
+        .demo-subtitle {
+            font-size: 0.82rem;
+            color: #7a7a8c;
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-badge {
+            font-size: 0.6rem;
+            padding: 3px 10px;
+            border: 1px solid #ff2d78;
+            color: #ff2d78;
+            border-radius: 2px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: rgba(255,45,120,0.08);
+            margin-top: 8px;
+            display: inline-block;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* ── 图谱区域 ── */
+        .graph-area {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,245,255,0.12);
+            border-radius: 4px;
             overflow: hidden;
             position: relative;
-            min-height: 500px;
+            min-height: 520px;
         }
-        #med-graph { width: 100%; height: 500px; }
-        .med-graph-hint {
-            position: absolute; top: 10px; right: 10px;
-            background: rgba(0,137,123,0.15);
-            border: 1px solid rgba(0,137,123,0.4);
-            border-radius: 6px;
+
+        .graph-area::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #ff2d78, transparent);
+            opacity: 0.4;
+        }
+
+        #med-graph { width: 100%; height: 520px; display: block; }
+
+        .graph-hint {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,45,120,0.08);
+            border: 1px solid rgba(255,45,120,0.25);
+            border-radius: 3px;
             padding: 8px 12px;
-            font-size: 0.75rem;
-            color: var(--kg-teal-light);
+            font-size: 0.7rem;
+            color: rgba(255,45,120,0.7);
+            font-family: 'JetBrains Mono', monospace;
         }
-        .med-panel-area { display: flex; flex-direction: column; gap: 16px; }
-        .med-infer-log {
-            max-height: 260px; overflow-y: auto;
+
+        .graph-legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(0,245,255,0.15);
+            border-radius: 3px;
+            padding: 8px 12px;
         }
-        .med-infer-log::-webkit-scrollbar { width: 4px; }
-        .med-infer-log::-webkit-scrollbar-thumb { background: var(--kg-teal); border-radius: 2px; }
-        .med-infer-step {
-            display: flex; gap: 10px;
+
+        .legend-item {
+            font-size: 0.68rem;
+            color: #7a7a8c;
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-item:last-child { margin-bottom: 0; }
+
+        .legend-dot {
+            width: 8px; height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* ── 右侧面板 ── */
+        .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+        .section-title {
+            font-size: 0.72rem;
+            color: #ff2d78;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.9;
+        }
+
+        .infer-log {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .infer-log::-webkit-scrollbar { width: 3px; }
+        .infer-log::-webkit-scrollbar-thumb { background: rgba(255,45,120,0.3); border-radius: 2px; }
+
+        .infer-step {
+            display: flex;
+            gap: 10px;
             padding: 10px 0;
-            border-bottom: 1px solid rgba(0,137,123,0.1);
-            font-size: 0.82rem;
-            animation: kgFadeIn 0.4s ease;
+            border-bottom: 1px solid rgba(255,45,120,0.06);
+            font-size: 0.8rem;
+            animation: fadeIn 0.4s ease;
         }
-        .med-infer-step:last-child { border-bottom: none; }
-        .med-step-num {
-            width: 22px; height: 22px; border-radius: 50%;
-            background: rgba(0,137,123,0.2);
-            border: 1px solid var(--kg-teal);
-            color: var(--kg-teal-light);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+
+        .infer-step:last-child { border-bottom: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .med-step-content { flex: 1; }
-        .med-step-title { color: var(--kg-text); font-weight: 500; margin-bottom: 3px; }
-        .med-step-detail { color: var(--kg-text-dim); font-size: 0.75rem; line-height: 1.5; }
-        .med-confidence-card {
-            background: rgba(0,137,123,0.08);
-            border: 1px solid rgba(0,137,123,0.25);
-            border-radius: 8px;
+
+        .step-num {
+            width: 22px; height: 22px;
+            border-radius: 3px;
+            background: rgba(255,45,120,0.15);
+            border: 1px solid rgba(255,45,120,0.4);
+            color: #ff2d78;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .step-content { flex: 1; }
+
+        .step-title { color: #e0e0e0; font-weight: 600; margin-bottom: 3px; font-size: 0.82rem; }
+
+        .step-detail { color: #3a3a4a; font-size: 0.73rem; line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
+
+        /* ── 置信度卡片 ── */
+        .conf-card {
+            background: rgba(255,45,120,0.06);
+            border: 1px solid rgba(255,45,120,0.2);
+            border-radius: 4px;
             padding: 16px;
         }
-        .med-confidence-title { font-size: 0.8rem; color: var(--kg-teal-light); margin-bottom: 12px; font-weight: 600; }
-        .med-predict-row {
-            display: flex; align-items: center; gap: 10px;
+
+        .conf-title {
+            font-size: 0.7rem;
+            color: #ff2d78;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .conf-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             margin-bottom: 10px;
         }
-        .med-predict-row:last-child { margin-bottom: 0; }
-        .med-predict-label { font-size: 0.78rem; color: var(--kg-text); min-width: 90px; }
-        .med-predict-bar-wrap { flex: 1; }
-        .med-predict-val { font-size: 0.75rem; color: var(--kg-teal-light); font-weight: 600; margin-bottom: 3px; }
-        .med-predict-bar { height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; }
-        .med-predict-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--kg-teal), var(--kg-teal-light)); transition: width 1s ease; }
-        .med-action-area {
-            display: flex; flex-direction: column; gap: 10px;
+
+        .conf-row:last-child { margin-bottom: 0; }
+
+        .conf-label {
+            font-size: 0.72rem;
+            color: #7a7a8c;
+            min-width: 100px;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .med-legend-area {
-            background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px 14px;
+
+        .conf-bar-wrap { flex: 1; }
+
+        .conf-val {
+            font-size: 0.72rem;
+            color: #ff2d78;
+            font-weight: 700;
+            margin-bottom: 3px;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .med-legend-area .kg-legend-item { font-size: 0.75rem; margin-bottom: 5px; }
-        .med-legend-area .kg-legend-item:last-child { margin-bottom: 0; }
+
+        .conf-bar {
+            height: 4px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .conf-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #ff2d78, rgba(255,45,120,0.5));
+            transition: width 1s ease;
+        }
+
+        /* ── 推理按钮 ── */
+        .action-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* ── 响应式 ── */
         @media (max-width: 900px) {
-            .med-demo-layout { grid-template-columns: 1fr; }
+            .main-grid { grid-template-columns: 1fr; }
             #med-graph { height: 380px; }
-            .med-graph-area { min-height: 380px; }
+            .graph-area { min-height: 380px; }
         }
     </style>
 </head>
-<body class="kg-body">
-<div class="kg-grid-bg"></div>
-<div class="kg-container kg-main">
+<body class="cyber-body">
+<div class="cyber-grid-bg"></div>
 
-    <div class="kg-page-header">
-        <h1 class="kg-page-title"><i class="fas fa-database"></i>基于知识图谱的知识补全</h1>
-        <p class="kg-page-desc">医疗知识图谱中缺失关系的智能推理与预测，以糖尿病诊疗知识图谱为例</p>
-        <span class="kg-page-tag medical"><i class="fas fa-heartbeat"></i> 医疗领域</span>
+<div class="cyber-container cyber-main" style="padding-top:20px;">
+
+    <div class="demo-header">
+        <div>
+            <h1 class="demo-title">
+                <i class="fas fa-brain"></i>KG Completion
+            </h1>
+            <p class="demo-subtitle">// 知识图谱补全 · 医疗领域 · 糖尿病诊疗推理</p>
+            <span class="demo-badge">医疗领域</span>
+        </div>
     </div>
 
-    <div class="med-demo-layout">
-        <div class="med-graph-area">
+    <div class="main-grid">
+        <!-- 左：图谱 -->
+        <div class="graph-area">
             <div id="med-graph"></div>
-            <div class="med-graph-hint">
+            <div class="graph-hint">
                 <i class="fas fa-lightbulb" style="margin-right:4px;"></i>
-                点击虚线边触发知识补全推理
+                虚线边为待补全关系
             </div>
-            <div class="kg-graph-legend" style="bottom:10px;left:10px;">
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-teal)"></span> 疾病</div>
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#f39c12"></span> 症状</div>
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#e53935"></span> 药品</div>
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:#7986cb"></span> 检查</div>
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-blue)"></span> 患者</div>
-                <div class="kg-legend-item"><span class="kg-legend-dot" style="background:var(--kg-red);opacity:0.5;border:2px dashed var(--kg-red)"></span> 待预测关系</div>
+            <div class="graph-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#30d158"></span> 疾病</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#ffd60a"></span> 症状</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#ff2d78"></span> 药品</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#bf5af2"></span> 检查</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#00f5ff;opacity:0.4;border:1px dashed #00f5ff"></span> 待预测</div>
             </div>
         </div>
 
-        <div class="med-panel-area">
-            <div class="kg-card med-action-area">
-                <div class="kg-section-title"><i class="fas fa-brain"></i> 推理引擎</div>
-                <div class="kg-btn kg-btn-primary" onclick="runInference()" style="width:100%;justify-content:center;">
+        <!-- 右：控制+推理 -->
+        <div class="right-col">
+            <div class="cyber-card action-area">
+                <div class="section-title"><i class="fas fa-microchip"></i> 推理引擎</div>
+                <button class="cyber-btn pink" onclick="runInference()" style="width:100%;justify-content:center;">
                     <i class="fas fa-play"></i> 启动知识补全
-                </div>
-                <div class="kg-btn kg-btn-ghost" onclick="resetMedGraph()" style="width:100%;justify-content:center;">
+                </button>
+                <button class="cyber-btn" onclick="resetMedGraph()" style="width:100%;justify-content:center;">
                     <i class="fas fa-redo"></i> 重置图谱
-                </div>
-                <div class="kg-btn kg-btn-ghost" onclick="runInference()" style="width:100%;justify-content:center;margin-top:4px;">
+                </button>
+                <button class="cyber-btn" onclick="runInference()" style="width:100%;justify-content:center;">
                     <i class="fas fa-sync-alt"></i> 重新推理
-                </div>
+                </button>
             </div>
 
-            <div class="kg-card">
-                <div class="kg-section-title"><i class="fas fa-project-diagram"></i> 推理过程</div>
-                <div class="med-infer-log" id="medInferLog">
-                    <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-                        <i class="fas fa-brain" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+            <div class="cyber-card">
+                <div class="section-title"><i class="fas fa-project-diagram"></i> 推理过程</div>
+                <div class="infer-log" id="medInferLog">
+                    <div style="text-align:center;padding:40px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+                        <i class="fas fa-brain" style="font-size:1.4rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
                         点击"启动知识补全"查看推理路径
                     </div>
                 </div>
             </div>
 
-            <div class="med-confidence-card">
-                <div class="med-confidence-title"><i class="fas fa-chart-bar" style="margin-right:6px;"></i> 预测置信度</div>
-                <div class="med-predict-row">
-                    <span class="med-predict-label">二甲双胍→不良反应</span>
-                    <div class="med-predict-bar-wrap">
-                        <div class="med-predict-val" id="conf1">—</div>
-                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf1bar" style="width:0%"></div></div>
+            <div class="conf-card">
+                <div class="conf-title"><i class="fas fa-chart-bar"></i> 预测置信度</div>
+                <div class="conf-row">
+                    <span class="conf-label">二甲双胍→不良反应</span>
+                    <div class="conf-bar-wrap">
+                        <div class="conf-val" id="conf1">—</div>
+                        <div class="conf-bar"><div class="conf-fill" id="conf1bar" style="width:0%"></div></div>
                     </div>
                 </div>
-                <div class="med-predict-row">
-                    <span class="med-predict-label">高血压→关联疾病</span>
-                    <div class="med-predict-bar-wrap">
-                        <div class="med-predict-val" id="conf2">—</div>
-                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf2bar" style="width:0%"></div></div>
+                <div class="conf-row">
+                    <span class="conf-label">高血压→合并用药</span>
+                    <div class="conf-bar-wrap">
+                        <div class="conf-val" id="conf2">—</div>
+                        <div class="conf-bar"><div class="conf-fill" id="conf2bar" style="width:0%"></div></div>
                     </div>
                 </div>
-                <div class="med-predict-row">
-                    <span class="med-predict-label">血糖检测→诊断依据</span>
-                    <div class="med-predict-bar-wrap">
-                        <div class="med-predict-val" id="conf3">—</div>
-                        <div class="med-predict-bar"><div class="med-predict-fill" id="conf3bar" style="width:0%"></div></div>
+                <div class="conf-row">
+                    <span class="conf-label">血糖检测→诊断依据</span>
+                    <div class="conf-bar-wrap">
+                        <div class="conf-val" id="conf3">—</div>
+                        <div class="conf-bar"><div class="conf-fill" id="conf3bar" style="width:0%"></div></div>
                     </div>
                 </div>
             </div>
@@ -166,43 +350,42 @@
 
 <script>
 const MED_NODES = [
-    { id: 'd1', name: '2型糖尿病', type: 'disease', desc: '以胰岛素抵抗为特征的代谢性疾病' },
-    { id: 'd2', name: '高血压', type: 'disease', desc: '以体循环动脉压升高为特征的临床综合征' },
-    { id: 'd3', name: '冠心病', type: 'disease', desc: '冠状动脉粥样硬化性心脏病' },
-    { id: 's1', name: '多饮', type: 'symptom', desc: '患者大量饮水仍感口渴' },
-    { id: 's2', name: '多尿', type: 'symptom', desc: '尿量明显增多，每日>2500ml' },
-    { id: 's3', name: '体重下降', type: 'symptom', desc: '非刻意性体重减轻' },
-    { id: 's4', name: '头晕', type: 'symptom', desc: '头部不适感，常与血压相关' },
-    { id: 's5', name: '胸闷', type: 'symptom', desc: '胸部紧缩感，心脏缺血表现' },
-    { id: 'm1', name: '二甲双胍', type: 'drug', desc: '一线降糖药，抑制肝糖输出' },
-    { id: 'm2', name: '阿司匹林', type: 'drug', desc: '抗血小板聚集药物' },
-    { id: 'c1', name: '血糖检测', type: 'check', desc: '空腹血糖及餐后2h血糖' },
-    { id: 'c2', name: '心电图', type: 'check', desc: '心脏电活动检查' },
+    { id:'d1', name:'2型糖尿病', type:'disease', desc:'以胰岛素抵抗为特征的代谢性疾病' },
+    { id:'d2', name:'高血压', type:'disease', desc:'以体循环动脉压升高为特征的临床综合征' },
+    { id:'d3', name:'冠心病', type:'disease', desc:'冠状动脉粥样硬化性心脏病' },
+    { id:'s1', name:'多饮', type:'symptom', desc:'患者大量饮水仍感口渴' },
+    { id:'s2', name:'多尿', type:'symptom', desc:'尿量明显增多，每日>2500ml' },
+    { id:'s3', name:'体重下降', type:'symptom', desc:'非刻意性体重减轻' },
+    { id:'s4', name:'头晕', type:'symptom', desc:'头部不适感，常与血压相关' },
+    { id:'s5', name:'胸闷', type:'symptom', desc:'胸部紧缩感，心脏缺血表现' },
+    { id:'m1', name:'二甲双胍', type:'drug', desc:'一线降糖药，抑制肝糖输出' },
+    { id:'m2', name:'阿司匹林', type:'drug', desc:'抗血小板聚集药物' },
+    { id:'c1', name:'血糖检测', type:'check', desc:'空腹血糖及餐后2h血糖' },
+    { id:'c2', name:'心电图', type:'check', desc:'心脏电活动检查' },
 ];
 
 const MED_LINKS = [
-    { source: 'd1', target: 's1', type: '典型症状' },
-    { source: 'd1', target: 's2', type: '典型症状' },
-    { source: 'd1', target: 's3', type: '临床表现' },
-    { source: 'd1', target: 'c1', type: '诊断依据' },
-    { source: 'd1', target: 'm1', type: '常用药' },
-    { source: 'd2', target: 's4', type: '常见症状' },
-    { source: 'd2', target: 'd3', type: '关联疾病' },
-    { source: 'd3', target: 's5', type: '典型症状' },
-    { source: 'd3', target: 'm2', type: '常用药' },
-    { source: 'd3', target: 'c2', type: '检查项目' },
-    // 待补全的虚线边
-    { source: 'm1', target: 's4', type: '?不良反应', missing: true, conf: 0.84 },
-    { source: 'd2', target: 'm1', type: '?合并用药', missing: true, conf: 0.76 },
-    { source: 'd1', target: 's5', type: '?需验证', missing: true, conf: 0.61 },
+    { source:'d1', target:'s1', type:'典型症状' },
+    { source:'d1', target:'s2', type:'典型症状' },
+    { source:'d1', target:'s3', type:'临床表现' },
+    { source:'d1', target:'c1', type:'诊断依据' },
+    { source:'d1', target:'m1', type:'常用药' },
+    { source:'d2', target:'s4', type:'常见症状' },
+    { source:'d2', target:'d3', type:'关联疾病' },
+    { source:'d3', target:'s5', type:'典型症状' },
+    { source:'d3', target:'m2', type:'常用药' },
+    { source:'d3', target:'c2', type:'检查项目' },
+    // 待补全
+    { source:'m1', target:'s4', type:'?不良反应', missing:true, conf:0.84 },
+    { source:'d2', target:'m1', type:'?合并用药', missing:true, conf:0.76 },
+    { source:'d1', target:'s5', type:'?需验证', missing:true, conf:0.61 },
 ];
 
 const MED_TYPE_COLORS = {
-    disease: { fill: '#00897b', stroke: '#4db6ac' },
-    symptom: { fill: '#f39c12', stroke: '#f1c40f' },
-    drug:    { fill: '#e53935', stroke: '#ff6659' },
-    check:   { fill: '#7986cb', stroke: '#9fa8da' },
-    patient: { fill: '#3a7bd5', stroke: '#5b9cf6' },
+    disease: { fill:'#30d158', stroke:'rgba(48,209,88,0.4)', glow:'#30d158' },
+    symptom: { fill:'#ffd60a', stroke:'rgba(255,214,10,0.4)', glow:'#ffd60a' },
+    drug:    { fill:'#ff2d78', stroke:'rgba(255,45,120,0.4)', glow:'#ff2d78' },
+    check:   { fill:'#bf5af2', stroke:'rgba(191,90,242,0.4)', glow:'#bf5af2' },
 };
 
 let medSim, medSvg, medG;
@@ -211,130 +394,123 @@ function initMedGraph() {
     const container = document.getElementById('med-graph');
     const W = container.clientWidth, H = container.clientHeight;
     d3.select('#med-graph').selectAll('*').remove();
-    medSvg = d3.select('#med-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0, 0, W, H]);
-    const zoom = d3.zoom().scaleExtent([0.4, 3]).on('zoom', e => medG.attr('transform', e.transform));
+
+    medSvg = d3.select('#med-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0,0,W,H]);
+
+    const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => medG.attr('transform', e.transform));
     medSvg.call(zoom);
 
     medSvg.append('defs').append('marker')
         .attr('id', 'med-arrow')
-        .attr('viewBox', '0 -5 10 10')
+        .attr('viewBox','0 -5 10 10')
         .attr('refX', 26).attr('refY', 0)
         .attr('markerWidth', 5).attr('markerHeight', 5)
         .attr('orient', 'auto')
-        .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', 'rgba(0,137,123,0.5)');
+        .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','rgba(0,245,255,0.5)');
 
-    // 虚线箭头
     medSvg.select('defs').append('marker')
         .attr('id', 'med-missing')
-        .attr('viewBox', '0 -5 10 10')
+        .attr('viewBox','0 -5 10 10')
         .attr('refX', 26).attr('refY', 0)
         .attr('markerWidth', 5).attr('markerHeight', 5)
         .attr('orient', 'auto')
-        .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#e53935');
+        .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#ff2d78');
 
     medG = medSvg.append('g');
     renderMedGraph();
 }
 
-function renderMedGraph(highlightPath) {
+function renderMedGraph() {
     medG.selectAll('*').remove();
 
-    // 边
     const link = medG.append('g').selectAll('line')
-        .data(MED_LINKS)
-        .enter().append('line')
-        .attr('x1', d => {
-            const s = MED_NODES.find(n => n.id === d.source);
-            return s ? s.x : 0;
-        })
-        .attr('y1', d => {
-            const s = MED_NODES.find(n => n.id === d.source);
-            return s ? s.y : 0;
-        })
-        .attr('x2', d => {
-            const t = MED_NODES.find(n => n.id === d.target);
-            return t ? t.x : 0;
-        })
-        .attr('y2', d => {
-            const t = MED_NODES.find(n => n.id === d.target);
-            return t ? t.y : 0;
-        })
-        .attr('stroke', d => d.missing ? '#e53935' : 'rgba(0,137,123,0.45)')
-        .attr('stroke-width', d => d.missing ? 2 : 1.5)
-        .attr('stroke-dasharray', d => d.missing ? '5,4' : 'none')
-        .attr('marker-end', d => d.missing ? 'url(#med-missing)' : 'url(#med-arrow)')
+        .data(MED_LINKS).enter().append('line')
+        .attr('x1', d=>{ const s=MED_NODES.find(n=>n.id===d.source); return s?s.x:0; })
+        .attr('y1', d=>{ const s=MED_NODES.find(n=>n.id===d.source); return s?s.y:0; })
+        .attr('x2', d=>{ const t=MED_NODES.find(n=>n.id===d.target); return t?t.x:0; })
+        .attr('y2', d=>{ const t=MED_NODES.find(n=>n.id===d.target); return t?t.y:0; })
+        .attr('stroke', d=>d.missing?'rgba(255,45,120,0.5)':'rgba(0,245,255,0.35)')
+        .attr('stroke-width', d=>d.missing?2:1.5)
+        .attr('stroke-dasharray', d=>d.missing?'5,4':'none')
+        .attr('marker-end', d=>d.missing?'url(#med-missing)':'url(#med-arrow)')
         .attr('opacity', 0)
-        .transition().delay((d,i) => i * 80).duration(500)
+        .transition().delay((d,i)=>i*80).duration(500)
         .attr('opacity', 1);
 
-    // 边标签
     const linkLabel = medG.append('g').selectAll('text')
-        .data(MED_LINKS)
-        .enter().append('text')
-        .text(d => d.type)
+        .data(MED_LINKS).enter().append('text')
+        .text(d=>d.type)
         .attr('font-size', 10)
-        .attr('fill', d => d.missing ? '#e53935' : 'rgba(0,137,123,0.7)')
-        .attr('text-anchor', 'middle')
+        .attr('fill', d=>d.missing?'rgba(255,45,120,0.7)':'rgba(0,245,255,0.6)')
+        .attr('text-anchor','middle')
+        .attr('font-family','JetBrains Mono, monospace')
         .attr('opacity', 0)
-        .transition().delay((d,i) => i * 80 + 300).duration(400)
+        .transition().delay((d,i)=>i*80+300).duration(400)
         .attr('opacity', 1);
 
-    // 节点
     const node = medG.append('g').selectAll('g')
-        .data(MED_NODES)
-        .enter().append('g')
-        .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`)
-        .attr('cursor', 'pointer');
+        .data(MED_NODES).enter().append('g')
+        .attr('transform', d=>`translate(${d.x||0},${d.y||0})`)
+        .attr('cursor','pointer');
+
+    // 外发光
+    node.append('circle')
+        .attr('r', 22)
+        .attr('fill','none')
+        .attr('stroke', d=>MED_TYPE_COLORS[d.type].glow)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .transition().delay((d,i)=>i*100).duration(600)
+        .attr('opacity', 0.2);
 
     node.append('rect')
-        .attr('width', d => Math.max(d.name.length * 14 + 28, 80))
+        .attr('width', d=>Math.max(d.name.length*14+28,80))
         .attr('height', 30)
-        .attr('x', d => -(Math.max(d.name.length * 14 + 28, 80)) / 2)
+        .attr('x', d=>-(Math.max(d.name.length*14+28,80))/2)
         .attr('y', -15)
-        .attr('rx', 5)
-        .attr('fill', d => MED_TYPE_COLORS[d.type].fill)
-        .attr('stroke', d => MED_TYPE_COLORS[d.type].stroke)
+        .attr('rx', 4)
+        .attr('fill', d=>MED_TYPE_COLORS[d.type].fill)
+        .attr('stroke', d=>MED_TYPE_COLORS[d.type].stroke)
         .attr('stroke-width', 1.5)
         .attr('opacity', 0)
-        .transition().delay((d,i) => i * 100).duration(500)
+        .transition().delay((d,i)=>i*100).duration(500)
         .attr('opacity', 1);
 
     node.append('text')
-        .text(d => d.name)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'central')
-        .attr('font-size', 12)
-        .attr('fill', '#fff')
-        .attr('font-weight', '500')
+        .text(d=>d.name)
+        .attr('text-anchor','middle')
+        .attr('dominant-baseline','central')
+        .attr('font-size', 11)
+        .attr('fill','#0a0a0f')
+        .attr('font-weight','600')
         .attr('opacity', 0)
-        .transition().delay((d,i) => i * 100 + 200).duration(400)
+        .transition().delay((d,i)=>i*100+200).duration(400)
         .attr('opacity', 1);
 
-    // 节点标注
-    const typeLabel = { disease: '疾病', symptom: '症状', drug: '药品', check: '检查', patient: '患者' };
+    const typeLabel = { disease:'疾病', symptom:'症状', drug:'药品', check:'检查' };
     node.append('text')
-        .text(d => typeLabel[d.type])
-        .attr('text-anchor', 'middle')
+        .text(d=>typeLabel[d.type])
+        .attr('text-anchor','middle')
         .attr('font-size', 8)
-        .attr('fill', 'rgba(255,255,255,0.7)')
+        .attr('fill','rgba(0,0,0,0.6)')
         .attr('y', 22)
         .attr('opacity', 0)
-        .transition().delay((d,i) => i * 100 + 400).duration(400)
+        .transition().delay((d,i)=>i*100+400).duration(400)
         .attr('opacity', 0.7);
 
     medSim = d3.forceSimulation(MED_NODES)
-        .force('link', d3.forceLink(MED_LINKS).id(d => d.id).distance(110))
+        .force('link', d3.forceLink(MED_LINKS).id(d=>d.id).distance(110))
         .force('charge', d3.forceManyBody().strength(-380))
-        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('center', d3.forceCenter(W/2, H/2))
         .force('collision', d3.forceCollide(35))
-        .on('tick', () => {
+        .on('tick',()=>{
             link
-                .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+                .attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+                .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
             linkLabel
-                .attr('x', d => (d.source.x + d.target.x) / 2)
-                .attr('y', d => (d.source.y + d.target.y) / 2 - 8);
-            node.attr('transform', d => `translate(${d.x},${d.y})`);
+                .attr('x',d=>(d.source.x+d.target.x)/2)
+                .attr('y',d=>(d.source.y+d.target.y)/2-8);
+            node.attr('transform',d=>`translate(${d.x},${d.y})`);
         });
 }
 
@@ -344,38 +520,34 @@ function runInference() {
     initMedGraph();
 
     const STEPS = [
-        { title: '节点激活', detail: '从已知节点「二甲双胍」出发，激活邻居节点...', delay: 400 },
-        { title: '关系传递', detail: '检测到「二甲双胍 → 常用药 → 2型糖尿病」，传递关系类型...', delay: 900 },
-        { title: '路径搜索', detail: '搜索从「二甲双胍」到「头晕」的所有可能路径...', delay: 1400 },
-        { title: '置信度计算', detail: '基于路径频率与医学知识库，计算预测置信度...', delay: 1900 },
-        { title: '结果验证', detail: '关联医学指南：二甲双胍常见不良反应包含头晕...', delay: 2400 },
-        { title: '补全完成', detail: '预测关系已添加至知识图谱 (置信度 84%)', delay: 2900 },
+        { title:'节点激活', detail:'从已知节点「二甲双胍」出发，激活邻居节点...', delay:400 },
+        { title:'关系传递', detail:'检测到「二甲双胍 → 常用药 → 2型糖尿病」，传递关系类型...', delay:900 },
+        { title:'路径搜索', detail:'搜索从「二甲双胍」到「头晕」的所有可能路径...', delay:1400 },
+        { title:'置信度计算', detail:'基于路径频率与医学知识库，计算预测置信度...', delay:1900 },
+        { title:'结果验证', detail:'关联医学指南：二甲双胍常见不良反应包含头晕...', delay:2400 },
+        { title:'补全完成', detail:'预测关系已添加至知识图谱 (置信度 84%)', delay:2900 },
     ];
 
-    STEPS.forEach((step, i) => {
-        setTimeout(() => {
+    STEPS.forEach((step,i)=>{
+        setTimeout(()=>{
             const item = document.createElement('div');
-            item.className = 'med-infer-step';
+            item.className = 'infer-step';
             item.innerHTML = `
-                <div class="med-step-num">${i + 1}</div>
-                <div class="med-step-content">
-                    <div class="med-step-title">${step.title}</div>
-                    <div class="med-step-detail">${step.detail}</div>
+                <div class="step-num">${i+1}</div>
+                <div class="step-content">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-detail">${step.detail}</div>
                 </div>
             `;
             log.appendChild(item);
             log.scrollTop = log.scrollHeight;
-
-            // 动态更新置信度
-            if (i === 3) {
-                animateConfidence('conf1', 'conf1bar', 84);
-                animateConfidence('conf2', 'conf2bar', 76);
-                animateConfidence('conf3', 'conf3bar', 61);
+            if (i===3) {
+                animateConfidence('conf1','conf1bar',84);
+                animateConfidence('conf2','conf2bar',76);
+                animateConfidence('conf3','conf3bar',61);
             }
-
-            // 完成后高亮虚线边
-            if (i === STEPS.length - 1) {
-                setTimeout(() => highlightMissing(), 500);
+            if (i===STEPS.length-1) {
+                setTimeout(()=>highlightMissing(), 500);
             }
         }, step.delay);
     });
@@ -385,7 +557,7 @@ function animateConfidence(id, barId, value) {
     const el = document.getElementById(id);
     const bar = document.getElementById(barId);
     let cur = 0;
-    const interval = setInterval(() => {
+    const interval = setInterval(()=>{
         cur += 2;
         if (cur >= value) { cur = value; clearInterval(interval); }
         el.textContent = cur + '%';
@@ -394,38 +566,35 @@ function animateConfidence(id, barId, value) {
 }
 
 function highlightMissing() {
-    // 虚线边变实线
     medG.selectAll('line')
-        .filter(d => d.missing)
+        .filter(d=>d.missing)
         .transition().duration(800)
-        .attr('stroke-dasharray', '0,0')
-        .attr('stroke', '#4db6ac')
-        .attr('marker-end', 'url(#med-arrow)');
-
-    // 边标签更新
-    const labels = { '?不良反应': '不良反应', '?合并用药': '合并用药', '?需验证': '需进一步验证' };
+        .attr('stroke-dasharray','0,0')
+        .attr('stroke','rgba(48,209,88,0.7)')
+        .attr('marker-end','url(#med-arrow)');
+    const labels = {'?不良反应':'不良反应','?合并用药':'合并用药','?需验证':'需进一步验证'};
     medG.selectAll('text')
-        .filter(d => d.missing)
+        .filter(d=>d.missing)
         .transition().duration(800)
-        .text(d => labels[d.type] || d.type)
-        .attr('fill', '#4db6ac');
+        .text(d=>labels[d.type]||d.type)
+        .attr('fill','rgba(48,209,88,0.8)');
 }
 
 function resetMedGraph() {
     initMedGraph();
     document.getElementById('medInferLog').innerHTML = `
-        <div style="text-align:center;padding:40px 0;color:var(--kg-text-dim);font-size:0.82rem;">
-            <i class="fas fa-brain" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:0.4;"></i>
+        <div style="text-align:center;padding:40px 0;color:#3a3a4a;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">
+            <i class="fas fa-brain" style="font-size:1.4rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
             点击"启动知识补全"查看推理路径
         </div>`;
-    ['conf1','conf2','conf3'].forEach(id => {
+    ['conf1','conf2','conf3'].forEach(id=>{
         document.getElementById(id).textContent = '—';
-        document.getElementById(id + 'bar').style.width = '0%';
+        document.getElementById(id+'bar').style.width = '0%';
     });
 }
 
-window.addEventListener('load', () => initMedGraph());
-window.addEventListener('resize', () => initMedGraph());
+window.addEventListener('load', ()=>initMedGraph());
+window.addEventListener('resize', ()=>initMedGraph());
 </script>
 </body>
 </html>
