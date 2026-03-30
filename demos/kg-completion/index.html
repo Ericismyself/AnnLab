@@ -388,14 +388,14 @@ const MED_TYPE_COLORS = {
     check:   { fill:'#bf5af2', stroke:'rgba(191,90,242,0.4)', glow:'#bf5af2' },
 };
 
-let medSim, medSvg, medG;
+let medSim, medSvg, medG, medW, medH;
 
 function initMedGraph() {
     const container = document.getElementById('med-graph');
-    const W = container.clientWidth, H = container.clientHeight;
+    medW = container.clientWidth, medH = container.clientHeight;
     d3.select('#med-graph').selectAll('*').remove();
 
-    medSvg = d3.select('#med-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0,0,W,H]);
+    medSvg = d3.select('#med-graph').append('svg').attr('width', medW).attr('height', medH).attr('viewBox', [0,0,medW,medH]);
 
     const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => medG.attr('transform', e.transform));
     medSvg.call(zoom);
@@ -501,7 +501,7 @@ function renderMedGraph() {
     medSim = d3.forceSimulation(MED_NODES)
         .force('link', d3.forceLink(MED_LINKS).id(d=>d.id).distance(110))
         .force('charge', d3.forceManyBody().strength(-380))
-        .force('center', d3.forceCenter(W/2, H/2))
+        .force('center', d3.forceCenter(medW/2, medH/2))
         .force('collision', d3.forceCollide(35))
         .on('tick',()=>{
             link

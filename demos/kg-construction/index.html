@@ -559,14 +559,14 @@ const KG_DATA = [
     }
 ];
 
-let sim, currentSample = 0;
+let sim, currentSample = 0, kgW, kgH;
 
 function initGraph() {
     const container = document.getElementById('kg-graph');
-    const W = container.clientWidth, H = container.clientHeight;
+    kgW = container.clientWidth, kgH = container.clientHeight;
     d3.select('#kg-graph').selectAll('*').remove();
 
-    const svg = d3.select('#kg-graph').append('svg').attr('width', W).attr('height', H).attr('viewBox', [0,0,W,H]);
+    const svg = d3.select('#kg-graph').append('svg').attr('width', kgW).attr('height', kgH).attr('viewBox', [0,0,kgW,kgH]);
 
     // 缩放
     const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => g.attr('transform', e.transform));
@@ -588,7 +588,7 @@ function initGraph() {
     sim = d3.forceSimulation()
         .force('link', d3.forceLink().id(d=>d.id).distance(130))
         .force('charge', d3.forceManyBody().strength(-420))
-        .force('center', d3.forceCenter(W/2, H/2))
+        .force('center', d3.forceCenter(kgW/2, kgH/2))
         .force('collision', d3.forceCollide(40));
     return g;
 }
